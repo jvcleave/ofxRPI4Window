@@ -203,12 +203,7 @@ public:
     fd_set fds;
     drmEventContext evctx;
     gbm_bo* bufferObject;
-    GLfloat aspect;
     
-    GLuint program;
-    GLint modelviewmatrix, modelviewprojectionmatrix, normalmatrix;
-    GLuint vbo;
-    GLuint positionsoffset, colorsoffset, normalsoffset;
     
     ofRectangle currentWindowRect;
     ofOrientation orientation;
@@ -260,5 +255,6 @@ public:
     EGLSurface getEGLSurface() override;
   
     virtual ~ofxRPI4Window();
-    
+    bool doCube;
+
 };

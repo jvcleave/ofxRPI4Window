@@ -3,6 +3,8 @@
 #define __func__ __PRETTY_FUNCTION__
 
 
+
+
 static bool has_ext(const char *extension_list, const char *ext)
 {
     
@@ -535,7 +537,7 @@ void ofxRPI4Window::init_gbm(int drm_fd, int w, int h, uint32_t format, uint64_t
 ofxRPI4Window::ofxRPI4Window() {
     orientation = OF_ORIENTATION_DEFAULT;
     bufferObject = NULL;
-
+    doCube = false;
 }
 ofxRPI4Window::ofxRPI4Window(const ofGLESWindowSettings & settings) {
     ofLog() << "CTOR CALLED WITH settings";
@@ -859,12 +861,15 @@ void ofxRPI4Window::finishRender()
 
 int frameCounter = 0;
 
+
+
+
+
 void ofxRPI4Window::draw()
 {
     frameCounter ++;
     
     //ofLog() << __func__ << " frameCounter: " << frameCounter;
-    aspect = (GLfloat)(gbm.height) / (GLfloat)(gbm.width);
 
     int waiting_for_flip = 1;
     
@@ -872,61 +877,32 @@ void ofxRPI4Window::draw()
     //printf("EGL draw \n");
     
     int i = frameCounter;
-    currentRenderer->startRender();
-    if( bEnableSetupScreen )
+    
+    if(doCube)
     {
-        currentRenderer->setupScreen();
-        bEnableSetupScreen = false;
+        //testCube.draw(gbm);
+        
+        coreEvents.notifyDraw();
+
+        swapBuffers();
+
+    }else
+    {
+        currentRenderer->startRender();
+        if( bEnableSetupScreen )
+        {
+            currentRenderer->setupScreen();
+            bEnableSetupScreen = false;
+        }
+        
+        
+        coreEvents.notifyDraw();
+        currentRenderer->finishRender();
+        swapBuffers();
     }
     
-    
-    coreEvents.notifyDraw();
-    currentRenderer->finishRender();
-    swapBuffers();
 
-#if 0
-    ESMatrix modelview;
-    
-    /* clear the color buffer */
-    glClearColor(0.5, 0.5, 0.5, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
-    
-    esMatrixLoadIdentity(&modelview);
-    esTranslate(&modelview, 0.0f, 0.0f, -8.0f);
-    esRotate(&modelview, 45.0f + (0.25f * i), 1.0f, 0.0f, 0.0f);
-    esRotate(&modelview, 45.0f - (0.5f * i), 0.0f, 1.0f, 0.0f);
-    esRotate(&modelview, 10.0f + (0.15f * i), 0.0f, 0.0f, 1.0f);
-    
-    ESMatrix projection;
-    esMatrixLoadIdentity(&projection);
-    esFrustum(&projection, -2.8f, +2.8f, -2.8f * aspect, +2.8f * aspect, 6.0f, 10.0f);
-    
-    ESMatrix modelviewprojection;
-    esMatrixLoadIdentity(&modelviewprojection);
-    esMatrixMultiply(&modelviewprojection, &modelview, &projection);
-    
-    float normal[9];
-    normal[0] = modelview.m[0][0];
-    normal[1] = modelview.m[0][1];
-    normal[2] = modelview.m[0][2];
-    normal[3] = modelview.m[1][0];
-    normal[4] = modelview.m[1][1];
-    normal[5] = modelview.m[1][2];
-    normal[6] = modelview.m[2][0];
-    normal[7] = modelview.m[2][1];
-    normal[8] = modelview.m[2][2];
-    
-    glUniformMatrix4fv(modelviewmatrix, 1, GL_FALSE, &modelview.m[0][0]);
-    glUniformMatrix4fv(modelviewprojectionmatrix, 1, GL_FALSE, &modelviewprojection.m[0][0]);
-    glUniformMatrix3fv(normalmatrix, 1, GL_FALSE, normal);
-    
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glDrawArrays(GL_TRIANGLE_STRIP, 4, 4);
-    glDrawArrays(GL_TRIANGLE_STRIP, 8, 4);
-    glDrawArrays(GL_TRIANGLE_STRIP, 12, 4);
-    glDrawArrays(GL_TRIANGLE_STRIP, 16, 4);
-    glDrawArrays(GL_TRIANGLE_STRIP, 20, 4);
-#endif
+
     
     gbm_bo* next_bo = gbm_surface_lock_front_buffer(gbm.surface);
     
@@ -948,7 +924,7 @@ void ofxRPI4Window::draw()
     }
     
     while (waiting_for_flip) {
-        ofLog() << "waiting_for_flip";
+        //ofLog() << "waiting_for_flip";
         
         FD_ZERO(&fds);
         FD_SET(0, &fds);

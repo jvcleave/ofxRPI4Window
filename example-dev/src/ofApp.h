@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ofMain.h"
+#include "esUtil.h"
+//#include "ofxRPI4Window.h"
+#include "TestCube.h"
 
 class ofApp : public ofBaseApp{
 public:
@@ -21,5 +24,8 @@ public:
     void gotMessage(ofMessage msg);
     
     ofImage image;
+    
+    void drawCube();
+    TestCube testCube;
 };
 

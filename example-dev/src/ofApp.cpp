@@ -2,8 +2,8 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-    image.load("test.jpg");
-    image.update();
+    ofxRPI4Window* winptr = static_cast<ofxRPI4Window*>(ofGetWindowPtr());
+    winptr->doCube = true;
 }
 
 //--------------------------------------------------------------
@@ -15,17 +15,28 @@ bool hasPrinted = false;
 //--------------------------------------------------------------
 void ofApp::draw(){
     
-    auto randomColor = ofColor(ofRandom(255), ofRandom(255), ofRandom(255));
-    //ofSetColor(randomColor);
-    //ofBackground(randomColor);
-    /*
-    for (size_t i=0; i<100; i++)
+    ofxRPI4Window* winptr = static_cast<ofxRPI4Window*>(ofGetWindowPtr());
+    if(winptr->doCube)
     {
-        ofDrawCircle(ofRandom(ofGetWidth()), ofRandom(ofGetHeight()), 100);
-    }*/
-    ofColor colorTwo(0, 0, 0);
+        testCube.draw(winptr->gbm);
+        ofLog() << "ofGetFrameNum: " << ofGetFrameNum();
+        ofLog() << "ofGetLastFrameTime: " << ofGetLastFrameTime();
+    }else
+    {
+        auto randomColor = ofColor(ofRandom(255), ofRandom(255), ofRandom(255));
+        //ofSetColor(randomColor);
+        //ofBackground(randomColor);
+        /*
+         for (size_t i=0; i<100; i++)
+         {
+         ofDrawCircle(ofRandom(ofGetWidth()), ofRandom(ofGetHeight()), 100);
+         }*/
+        ofColor colorTwo(0, 0, 0);
+        
+        ofBackgroundGradient(randomColor, colorTwo, OF_GRADIENT_CIRCULAR);
+    }
     
-    ofBackgroundGradient(randomColor, colorTwo, OF_GRADIENT_CIRCULAR);
+   
     if (!hasPrinted)
     {
         stringstream info;
@@ -48,8 +59,7 @@ void ofApp::draw(){
     //image.draw(0, 0, 100, 100);
     
     //ofLog() << "draw";
-    ofLog() << "ofGetFrameNum: " << ofGetFrameNum();
-    ofLog() << "ofGetLastFrameTime: " << ofGetLastFrameTime();
+ 
 
 }
 
@@ -58,9 +68,9 @@ int counter = 0;
 void ofApp::drawGraphicsExample()
 {
     
-    
     counter++;
-    
+
+#if 0
     //--------------------------- circles
     //let's draw a circle:
     ofSetColor(255,130,0);
@@ -115,8 +125,12 @@ void ofApp::drawGraphicsExample()
     
     ofSetHexColor(0x000000);
     ofDrawBitmapString("lines\npress 's' to toggle smoothness", 600,500);
-    
+#endif
 }
+
+
+
+
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
