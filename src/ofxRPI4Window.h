@@ -235,6 +235,8 @@ public:
     void enableSetupScreen() override;
     void disableSetupScreen() override;
     void setWindowShape(int w, int h) override;
+    
+    
     void update() override;
     void draw() override;
     void swapBuffers() override;
@@ -242,6 +244,7 @@ public:
     void makeCurrent() override;
     void startRender() override;
     void finishRender() override;
+    
     ofCoreEvents coreEvents;
     ofCoreEvents & events();
     std::shared_ptr<ofBaseRenderer> & renderer();
@@ -255,6 +258,6 @@ public:
     EGLSurface getEGLSurface() override;
   
     virtual ~ofxRPI4Window();
-    bool doCube;
+    bool skipRender;
 
 };

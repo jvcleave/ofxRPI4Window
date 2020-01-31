@@ -3,7 +3,7 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     ofxRPI4Window* winptr = static_cast<ofxRPI4Window*>(ofGetWindowPtr());
-    winptr->doCube = true;
+    winptr->skipRender = false;
 }
 
 //--------------------------------------------------------------
@@ -16,7 +16,7 @@ bool hasPrinted = false;
 void ofApp::draw(){
     
     ofxRPI4Window* winptr = static_cast<ofxRPI4Window*>(ofGetWindowPtr());
-    if(winptr->doCube)
+    if(winptr->skipRender)
     {
         testCube.draw(winptr->gbm);
         //ofLog() << "ofGetFrameNum: " << ofGetFrameNum();
@@ -26,14 +26,9 @@ void ofApp::draw(){
         auto randomColor = ofColor(ofRandom(255), ofRandom(255), ofRandom(255));
         //ofSetColor(randomColor);
         //ofBackground(randomColor);
-        /*
-         for (size_t i=0; i<100; i++)
-         {
-         ofDrawCircle(ofRandom(ofGetWidth()), ofRandom(ofGetHeight()), 100);
-         }*/
-        ofColor colorTwo(0, 0, 0);
+        ofBackgroundGradient(randomColor, ofColor::black, OF_GRADIENT_CIRCULAR);
         
-        ofBackgroundGradient(randomColor, colorTwo, OF_GRADIENT_CIRCULAR);
+        drawGraphicsExample();
     }
     
    
@@ -54,23 +49,15 @@ void ofApp::draw(){
         ofLog() << "info: " << info.str();
         hasPrinted = true;
     }
-    
-    //drawGraphicsExample();
-    //image.draw(0, 0, 100, 100);
-    
-    //ofLog() << "draw";
- 
 
 }
 
-int counter = 0;
 
 void ofApp::drawGraphicsExample()
 {
     
-    counter++;
+    int counter = ofGetFrameNum();
 
-#if 0
     //--------------------------- circles
     //let's draw a circle:
     ofSetColor(255,130,0);
@@ -125,7 +112,6 @@ void ofApp::drawGraphicsExample()
     
     ofSetHexColor(0x000000);
     ofDrawBitmapString("lines\npress 's' to toggle smoothness", 600,500);
-#endif
 }
 
 

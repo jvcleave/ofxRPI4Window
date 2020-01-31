@@ -4,8 +4,34 @@
 
 
 
+#define MAX_DRM_DEVICES 64
 
-static bool has_ext(const char *extension_list, const char *ext)
+#define CASE_STR(x,y) case x: str = y; break
+
+static string eglErrorString(EGLint err) {
+    string str;
+    switch (err) {
+            CASE_STR(EGL_SUCCESS, "EGL_SUCCESS");
+            CASE_STR(EGL_NOT_INITIALIZED, "EGL_NOT_INITIALIZED");
+            CASE_STR(EGL_BAD_ACCESS, "EGL_BAD_ACCESS");
+            CASE_STR(EGL_BAD_ALLOC, "EGL_BAD_ACCESS");
+            CASE_STR(EGL_BAD_ATTRIBUTE, "EGL_BAD_ATTRIBUTE");
+            CASE_STR(EGL_BAD_CONTEXT, "EGL_BAD_CONTEXT");
+            CASE_STR(EGL_BAD_CONFIG, "EGL_BAD_CONFIG");
+            CASE_STR(EGL_BAD_CURRENT_SURFACE, "EGL_BAD_CURRENT_SURFACE");
+            CASE_STR(EGL_BAD_DISPLAY, "EGL_BAD_DISPLAY");
+            CASE_STR(EGL_BAD_SURFACE, "EGL_BAD_SURFACE");
+            CASE_STR(EGL_BAD_MATCH, "EGL_BAD_MATCH");
+            CASE_STR(EGL_BAD_PARAMETER, "EGL_BAD_PARAMETER");
+            CASE_STR(EGL_BAD_NATIVE_PIXMAP, "EGL_BAD_NATIVE_PIXMAP");
+            CASE_STR(EGL_BAD_NATIVE_WINDOW, "EGL_BAD_NATIVE_WINDOW");
+            CASE_STR(EGL_CONTEXT_LOST, "EGL_CONTEXT_LOST");
+        default: str = "unknown error " + err; break;
+    }
+    return str;
+}
+
+bool has_ext(const char *extension_list, const char *ext)
 {
     
     ofLog() << "extension_list: " << extension_list;
@@ -29,8 +55,7 @@ static bool has_ext(const char *extension_list, const char *ext)
     }
 }
 
-static int
-match_config_to_visual(EGLDisplay egl_display,
+int match_config_to_visual(EGLDisplay egl_display,
                        EGLint visual_id,
                        EGLConfig *configs,
                        int count)
@@ -52,8 +77,7 @@ match_config_to_visual(EGLDisplay egl_display,
     return -1;
 }
 
-static bool
-egl_choose_config(EGLDisplay egl_display, const EGLint *attribs,
+bool egl_choose_config(EGLDisplay egl_display, const EGLint *attribs,
                   EGLint visual_id, EGLConfig *config_out)
 {
     EGLint count = 0;
@@ -94,40 +118,129 @@ out:
     return true;
 }
 
-
-
-#define CASE_STR(x,y) case x: str = y; break
-
-static string eglErrorString(EGLint err) {
-    string str;
-    switch (err) {
-            CASE_STR(EGL_SUCCESS, "EGL_SUCCESS");
-            CASE_STR(EGL_NOT_INITIALIZED, "EGL_NOT_INITIALIZED");
-            CASE_STR(EGL_BAD_ACCESS, "EGL_BAD_ACCESS");
-            CASE_STR(EGL_BAD_ALLOC, "EGL_BAD_ACCESS");
-            CASE_STR(EGL_BAD_ATTRIBUTE, "EGL_BAD_ATTRIBUTE");
-            CASE_STR(EGL_BAD_CONTEXT, "EGL_BAD_CONTEXT");
-            CASE_STR(EGL_BAD_CONFIG, "EGL_BAD_CONFIG");
-            CASE_STR(EGL_BAD_CURRENT_SURFACE, "EGL_BAD_CURRENT_SURFACE");
-            CASE_STR(EGL_BAD_DISPLAY, "EGL_BAD_DISPLAY");
-            CASE_STR(EGL_BAD_SURFACE, "EGL_BAD_SURFACE");
-            CASE_STR(EGL_BAD_MATCH, "EGL_BAD_MATCH");
-            CASE_STR(EGL_BAD_PARAMETER, "EGL_BAD_PARAMETER");
-            CASE_STR(EGL_BAD_NATIVE_PIXMAP, "EGL_BAD_NATIVE_PIXMAP");
-            CASE_STR(EGL_BAD_NATIVE_WINDOW, "EGL_BAD_NATIVE_WINDOW");
-            CASE_STR(EGL_CONTEXT_LOST, "EGL_CONTEXT_LOST");
-        default: str = "unknown error " + err; break;
-    }
-    return str;
+int get_resources(int fd, drmModeRes **resources)
+{
+    *resources = drmModeGetResources(fd);
+    if (*resources == NULL)
+        return -1;
+    return 0;
 }
-/*
- void get_proc_client(EGL* egl, const char *ext, const char *name)
- {
- if (has_ext(egl_exts_client, ext))
- {
- egl->name = (void *)eglGetProcAddress(name);
- }
- }*/
+
+
+uint32_t find_crtc_for_encoder(const drmModeRes *resources,
+                               const drmModeEncoder *encoder) {
+    int i;
+    
+    for (i = 0; i < resources->count_crtcs; i++) {
+        /* possible_crtcs is a bitmask as described here:
+         * https://dvdhrm.wordpress.com/2012/09/13/linux-drm-mode-setting-api
+         */
+        const uint32_t crtc_mask = 1 << i;
+        const uint32_t crtc_id = resources->crtcs[i];
+        if (encoder->possible_crtcs & crtc_mask) {
+            return crtc_id;
+        }
+    }
+    
+    /* no match found */
+    return -1;
+}
+
+
+uint32_t find_crtc_for_connector(DRM& drm, drmModeRes *resources, drmModeConnector *connector) {
+    int i;
+    
+    for (i = 0; i < connector->count_encoders; i++) {
+        const uint32_t encoder_id = connector->encoders[i];
+        drmModeEncoder *encoder = drmModeGetEncoder(drm.fd, encoder_id);
+        
+        if (encoder) {
+            const uint32_t crtc_id = find_crtc_for_encoder(resources, encoder);
+            
+            drmModeFreeEncoder(encoder);
+            if (crtc_id != 0) {
+                return crtc_id;
+            }
+        }
+    }
+    
+    /* no match found */
+    return -1;
+}
+
+
+int find_drm_device(drmModeRes **resources)
+{
+    drmDevicePtr devices[MAX_DRM_DEVICES] = { NULL };
+    int num_devices, fd = -1;
+    
+    num_devices = drmGetDevices2(0, devices, MAX_DRM_DEVICES);
+    if (num_devices < 0) {
+        ofLog(OF_LOG_VERBOSE, "drmGetDevices2 failed: %s\n", strerror(-num_devices));
+        return -1;
+    }
+    ofLog() << "num_devices: " << num_devices;
+    
+    for (int i = 0; i < num_devices; i++) {
+        drmDevicePtr device = devices[i];
+        int ret;
+        
+        if (!(device->available_nodes & (1 << DRM_NODE_PRIMARY)))
+            continue;
+        /* OK, it's a primary device. If we can get the
+         * drmModeResources, it means it's also a
+         * KMS-capable device.
+         */
+        fd = open(device->nodes[DRM_NODE_PRIMARY], O_RDWR);
+        if (fd < 0)
+            continue;
+        ret = get_resources(fd, resources);
+        if (!ret)
+            break;
+        close(fd);
+        fd = -1;
+    }
+    drmFreeDevices(devices, num_devices);
+    
+    if (fd < 0)
+        ofLog(OF_LOG_VERBOSE, "no drm device found!\n");
+    
+    ofLog() << "fd: " << fd;
+    
+    
+    return fd;
+}
+
+static void
+page_flip_handler(int fd, unsigned int frame,
+                  unsigned int sec, unsigned int usec, void *data)
+{
+    /* suppress 'unused parameter' warnings */
+    (void)fd, (void)frame, (void)sec, (void)usec;
+    //ofLog() << __func__;
+    
+    int *waiting_for_flip = (int*)data;
+    *waiting_for_flip = 0;
+}
+
+static void
+drm_fb_destroy_callback(struct gbm_bo *bo, void *data)
+{
+    
+    ofLog() << __func__;
+    
+    int drm_fd = gbm_device_get_fd(gbm_bo_get_device(bo));
+    struct drm_fb *fb = (drm_fb*)data;
+    
+    if (fb->fb_id)
+        drmModeRmFB(drm_fd, fb->fb_id);
+    
+    free(fb);
+}
+
+
+
+
 void ofxRPI4Window::init_egl(int samples)
 {
     
@@ -148,7 +261,10 @@ void ofxRPI4Window::init_egl(int samples)
         EGL_SAMPLES, samples,
         EGL_NONE
     };
-    const char *egl_exts_client, *egl_exts_dpy, *gl_exts;
+    const char *egl_exts_client = NULL;
+    const char *egl_exts_dpy = NULL;
+    const char *gl_exts = NULL;
+
     
     
     
@@ -258,98 +374,128 @@ void ofxRPI4Window::init_egl(int samples)
    
 }
 
-int get_resources(int fd, drmModeRes **resources)
+
+
+
+
+ofxRPI4Window::ofxRPI4Window() {
+    orientation = OF_ORIENTATION_DEFAULT;
+    bufferObject = NULL;
+    skipRender = false;
+}
+ofxRPI4Window::ofxRPI4Window(const ofGLESWindowSettings & settings) {
+    ofLog() << "CTOR CALLED WITH settings";
+    setup(settings);
+}
+
+
+void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
 {
-    *resources = drmModeGetResources(fd);
-    if (*resources == NULL)
-        return -1;
-    return 0;
-}
+ 
+    bEnableSetupScreen = true;
+    windowMode = OF_WINDOW;
+    glesVersion = settings.glesVersion;
 
-#define MAX_DRM_DEVICES 64
-
-uint32_t find_crtc_for_encoder(const drmModeRes *resources,
-                               const drmModeEncoder *encoder) {
-    int i;
+    //ofAppBaseGLESWindow::setup(settings);
     
-    for (i = 0; i < resources->count_crtcs; i++) {
-        /* possible_crtcs is a bitmask as described here:
-         * https://dvdhrm.wordpress.com/2012/09/13/linux-drm-mode-setting-api
-         */
-        const uint32_t crtc_mask = 1 << i;
-        const uint32_t crtc_id = resources->crtcs[i];
-        if (encoder->possible_crtcs & crtc_mask) {
-            return crtc_id;
-        }
-    }
+    ofLog() << "setup ofGLESWindowSettings";
+    ofLog() << "DRM_DISPLAY_MODE_LEN: " << DRM_DISPLAY_MODE_LEN;
+    char mode_str[DRM_DISPLAY_MODE_LEN] = "";
     
-    /* no match found */
-    return -1;
-}
-
-
-uint32_t find_crtc_for_connector(DRM& drm, drmModeRes *resources, drmModeConnector *connector) {
-    int i;
+    char *device = NULL;
+    uint32_t format = DRM_FORMAT_XRGB8888;
+    uint64_t modifier = DRM_FORMAT_MOD_LINEAR;
     
-    for (i = 0; i < connector->count_encoders; i++) {
-        const uint32_t encoder_id = connector->encoders[i];
-        drmModeEncoder *encoder = drmModeGetEncoder(drm.fd, encoder_id);
-        
-        if (encoder) {
-            const uint32_t crtc_id = find_crtc_for_encoder(resources, encoder);
+    unsigned int vrefresh = 0;
+    init_drm(device, mode_str, vrefresh);
+
+    if(drm.mode)
+    {
+        ofLog() << "setup drm.mode: " << drm.mode;
+        if(drm.mode->hdisplay)
+        {
+            ofLog() << "hdisplay: " << drm.mode->hdisplay;
             
-            drmModeFreeEncoder(encoder);
-            if (crtc_id != 0) {
-                return crtc_id;
-            }
+        }else
+        {
+            ofLog() << "NO hdisplay";
         }
-    }
-    
-    /* no match found */
-    return -1;
-}
-
-
-int find_drm_device(drmModeRes **resources)
-{
-    drmDevicePtr devices[MAX_DRM_DEVICES] = { NULL };
-    int num_devices, fd = -1;
-    
-    num_devices = drmGetDevices2(0, devices, MAX_DRM_DEVICES);
-    if (num_devices < 0) {
-        ofLog(OF_LOG_VERBOSE, "drmGetDevices2 failed: %s\n", strerror(-num_devices));
-        return -1;
-    }
-    ofLog() << "num_devices: " << num_devices;
-    
-    for (int i = 0; i < num_devices; i++) {
-        drmDevicePtr device = devices[i];
-        int ret;
         
-        if (!(device->available_nodes & (1 << DRM_NODE_PRIMARY)))
-            continue;
-        /* OK, it's a primary device. If we can get the
-         * drmModeResources, it means it's also a
-         * KMS-capable device.
-         */
-        fd = open(device->nodes[DRM_NODE_PRIMARY], O_RDWR);
-        if (fd < 0)
-            continue;
-        ret = get_resources(fd, resources);
-        if (!ret)
-            break;
-        close(fd);
-        fd = -1;
+        if(drm.mode->vdisplay)
+        {
+            ofLog() << "vdisplay: " << drm.mode->vdisplay;
+            
+        }else
+        {
+            ofLog() << "NO vdisplay";
+        }
+        
+        
     }
-    drmFreeDevices(devices, num_devices);
+    if(drm.mode->hdisplay && drm.mode->vdisplay)
+    {
+        init_gbm(drm.fd, drm.mode->hdisplay, drm.mode->vdisplay, format, modifier);
+        int samples = 0;
+        init_egl(samples);
+        
     
-    if (fd < 0)
-        ofLog(OF_LOG_VERBOSE, "no drm device found!\n");
+        
+      
+        currentRenderer = make_shared<ofGLProgrammableRenderer>(this);
+        makeCurrent();
+        static_cast<ofGLProgrammableRenderer*>(currentRenderer.get())->setup(2,0);
+
+        evctx = {
+            .version = 2,
+            .page_flip_handler = page_flip_handler,
+        };
+        
+        swapBuffers();
+        
+        
+        //BEGIN drm_fb_get_from_bo
+
+        drm_fb_get_from_bo(bufferObject);
+        
+        
+        
+        //END drm_fb_get_from_bo
+        
+        
+        glClearColor(255.0f,
+                     255.0f,
+                     255.0f,
+                     255.0f);
+        glClear( GL_COLOR_BUFFER_BIT );
+        glClear( GL_DEPTH_BUFFER_BIT );
+        
+#if 0
+        auto gl_exts = (char *) glGetString(GL_EXTENSIONS);
+        ofLog(OF_LOG_VERBOSE, "GL INFO");
+        ofLog(OF_LOG_VERBOSE, "  version: \"%s\"", glGetString(GL_VERSION));
+        ofLog(OF_LOG_VERBOSE, "  shading language version: \"%s\"", glGetString(GL_SHADING_LANGUAGE_VERSION));
+        ofLog(OF_LOG_VERBOSE, "  vendor: \"%s\"", glGetString(GL_VENDOR));
+        ofLog(OF_LOG_VERBOSE, "  renderer: \"%s\"", glGetString(GL_RENDERER));
+        ofLog(OF_LOG_VERBOSE, "  extensions: \"%s\"", gl_exts);
+        ofLog(OF_LOG_VERBOSE, "===================================\n");
+        //get_proc_gl(GL_OES_EGL_image, glEGLImageTargetTexture2DOES);
+        
+        ofLog() << "-----EGL-----";
+        //ofLog() << "EGL_VERSION_MAJOR = " << eglVersionMajor;
+        //ofLog() << "EGL_VERSION_MINOR = " << eglVersionMinor;
+        ofLog() << "EGL_CLIENT_APIS = " << eglQueryString(getEGLDisplay(), EGL_CLIENT_APIS);
+        ofLog() << "EGL_VENDOR = "  << eglQueryString(getEGLDisplay(), EGL_VENDOR);
+        ofLog() << "EGL_VERSION = " << eglQueryString(getEGLDisplay(), EGL_VERSION);
+        ofLog() << "EGL_EXTENSIONS = " << eglQueryString(getEGLDisplay(), EGL_EXTENSIONS);
+        ofLog() << "GL_RENDERER = " << glGetString(GL_RENDERER);
+        ofLog() << "GL_VERSION  = " << glGetString(GL_VERSION);
+        ofLog() << "GL_VENDOR   = " << glGetString(GL_VENDOR);
+        ofLog() << "-------------";
+#endif
+    }
     
-    ofLog() << "fd: " << fd;
     
     
-    return fd;
 }
 
 void ofxRPI4Window::init_drm(const char *device, const char *mode_str, unsigned int vrefresh)
@@ -533,154 +679,6 @@ void ofxRPI4Window::init_gbm(int drm_fd, int w, int h, uint32_t format, uint64_t
     
 }
 
-
-ofxRPI4Window::ofxRPI4Window() {
-    orientation = OF_ORIENTATION_DEFAULT;
-    bufferObject = NULL;
-    doCube = false;
-}
-ofxRPI4Window::ofxRPI4Window(const ofGLESWindowSettings & settings) {
-    ofLog() << "CTOR CALLED WITH settings";
-    setup(settings);
-}
-
-
-
-
-static void page_flip_handler(int fd, unsigned int frame,
-                              unsigned int sec, unsigned int usec, void *data)
-{
-    /* suppress 'unused parameter' warnings */
-    (void)fd, (void)frame, (void)sec, (void)usec;
-    //ofLog() << __func__;
-
-    int *waiting_for_flip = (int*)data;
-    *waiting_for_flip = 0;
-}
-
-static void
-drm_fb_destroy_callback(struct gbm_bo *bo, void *data)
-{
-    
-    ofLog() << __func__;
-    
-    int drm_fd = gbm_device_get_fd(gbm_bo_get_device(bo));
-    struct drm_fb *fb = (drm_fb*)data;
-    
-    if (fb->fb_id)
-        drmModeRmFB(drm_fd, fb->fb_id);
-    
-    free(fb);
-}
-
-void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
-{
- 
-    bEnableSetupScreen = true;
-    windowMode = OF_WINDOW;
-    glesVersion = settings.glesVersion;
-
-    //ofAppBaseGLESWindow::setup(settings);
-    
-    ofLog() << "setup ofGLESWindowSettings";
-    ofLog() << "DRM_DISPLAY_MODE_LEN: " << DRM_DISPLAY_MODE_LEN;
-    char mode_str[DRM_DISPLAY_MODE_LEN] = "";
-    
-    char *device = NULL;
-    uint32_t format = DRM_FORMAT_XRGB8888;
-    uint64_t modifier = DRM_FORMAT_MOD_LINEAR;
-    
-    unsigned int vrefresh = 0;
-    init_drm(device, mode_str, vrefresh);
-
-    if(drm.mode)
-    {
-        ofLog() << "setup drm.mode: " << drm.mode;
-        if(drm.mode->hdisplay)
-        {
-            ofLog() << "hdisplay: " << drm.mode->hdisplay;
-            
-        }else
-        {
-            ofLog() << "NO hdisplay";
-        }
-        
-        if(drm.mode->vdisplay)
-        {
-            ofLog() << "vdisplay: " << drm.mode->vdisplay;
-            
-        }else
-        {
-            ofLog() << "NO vdisplay";
-        }
-        
-        
-    }
-    if(drm.mode->hdisplay && drm.mode->vdisplay)
-    {
-        init_gbm(drm.fd, drm.mode->hdisplay, drm.mode->vdisplay, format, modifier);
-        int samples = 0;
-        init_egl(samples);
-        
-    
-        
-      
-        currentRenderer = make_shared<ofGLProgrammableRenderer>(this);
-        makeCurrent();
-        
-        evctx = {
-            .version = 2,
-            .page_flip_handler = page_flip_handler,
-        };
-        
-        swapBuffers();
-        
-        
-        //BEGIN drm_fb_get_from_bo
-
-        drm_fb_get_from_bo(bufferObject);
-        
-        
-        
-        //END drm_fb_get_from_bo
-        
-        
-        glClearColor(255.0f,
-                     255.0f,
-                     255.0f,
-                     255.0f);
-        glClear( GL_COLOR_BUFFER_BIT );
-        glClear( GL_DEPTH_BUFFER_BIT );
-        
-#if 0
-        auto gl_exts = (char *) glGetString(GL_EXTENSIONS);
-        ofLog(OF_LOG_VERBOSE, "GL INFO");
-        ofLog(OF_LOG_VERBOSE, "  version: \"%s\"", glGetString(GL_VERSION));
-        ofLog(OF_LOG_VERBOSE, "  shading language version: \"%s\"", glGetString(GL_SHADING_LANGUAGE_VERSION));
-        ofLog(OF_LOG_VERBOSE, "  vendor: \"%s\"", glGetString(GL_VENDOR));
-        ofLog(OF_LOG_VERBOSE, "  renderer: \"%s\"", glGetString(GL_RENDERER));
-        ofLog(OF_LOG_VERBOSE, "  extensions: \"%s\"", gl_exts);
-        ofLog(OF_LOG_VERBOSE, "===================================\n");
-        //get_proc_gl(GL_OES_EGL_image, glEGLImageTargetTexture2DOES);
-        
-        ofLog() << "-----EGL-----";
-        //ofLog() << "EGL_VERSION_MAJOR = " << eglVersionMajor;
-        //ofLog() << "EGL_VERSION_MINOR = " << eglVersionMinor;
-        ofLog() << "EGL_CLIENT_APIS = " << eglQueryString(getEGLDisplay(), EGL_CLIENT_APIS);
-        ofLog() << "EGL_VENDOR = "  << eglQueryString(getEGLDisplay(), EGL_VENDOR);
-        ofLog() << "EGL_VERSION = " << eglQueryString(getEGLDisplay(), EGL_VERSION);
-        ofLog() << "EGL_EXTENSIONS = " << eglQueryString(getEGLDisplay(), EGL_EXTENSIONS);
-        ofLog() << "GL_RENDERER = " << glGetString(GL_RENDERER);
-        ofLog() << "GL_VERSION  = " << glGetString(GL_VERSION);
-        ofLog() << "GL_VENDOR   = " << glGetString(GL_VENDOR);
-        ofLog() << "-------------";
-#endif
-    }
-    
-    
-    
-}
-
 drm_fb* ofxRPI4Window::drm_fb_get_from_bo(gbm_bo* bo)
 {
     
@@ -828,31 +826,13 @@ void ofxRPI4Window::finishRender()
     renderer()->finishRender();
 }
 
-
-
-
-int frameCounter = 0;
-
-
-
-
-
 void ofxRPI4Window::draw()
 {
-    frameCounter ++;
     
-    //ofLog() << __func__ << " frameCounter: " << frameCounter;
-
     int waiting_for_flip = 1;
     
-    //egl->draw(i++);
-    //printf("EGL draw \n");
-    
-    int i = frameCounter;
-    
-    if(doCube)
+    if(skipRender)
     {
-        //testCube.draw(gbm);
         
         coreEvents.notifyDraw();
 
@@ -864,7 +844,7 @@ void ofxRPI4Window::draw()
         if( bEnableSetupScreen )
         {
             currentRenderer->setupScreen();
-            bEnableSetupScreen = false;
+            //bEnableSetupScreen = false;
         }
         
         
@@ -965,14 +945,16 @@ EGLSurface ofxRPI4Window::getEGLSurface()
     return egl.surface;
 }
 
+shared_ptr<ofBaseRenderer> & ofxRPI4Window::renderer(){
+    
+    //ofLog() << __func__;
+    
+    return currentRenderer;
+}
+
 ofxRPI4Window::~ofxRPI4Window()
 {
     
 }
 
-shared_ptr<ofBaseRenderer> & ofxRPI4Window::renderer(){
-    
-    //ofLog() << __func__;
 
-    return currentRenderer;
-}
