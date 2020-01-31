@@ -23,5 +23,5 @@ meta:
 common:
 
 	ADDON_INCLUDES = src
-    ADDON_CFLAGS = -Wno-unused-variable -Wno-unused-value -Wno-unused-function
+    ADDON_CFLAGS = -Wno-unused-variable -Wno-unused-value -Wno-unused-function -Wno-class-memaccess
 	ADDON_LDFLAGS= -ldrm -lgbm

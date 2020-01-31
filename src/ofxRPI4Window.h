@@ -57,7 +57,6 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#include "esUtil.h"
 
 #ifndef EGL_KHR_platform_gbm
 #define EGL_KHR_platform_gbm 1

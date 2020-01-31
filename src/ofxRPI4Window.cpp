@@ -270,8 +270,7 @@ void ofxRPI4Window::init_egl(int samples)
     
     egl_exts_client = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
     
-    egl.modifiers_supported = has_ext(egl_exts_dpy,
-                                      "EGL_EXT_image_dma_buf_import_modifiers");
+
     
     
     egl.eglGetPlatformDisplayEXT = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
@@ -290,14 +289,6 @@ void ofxRPI4Window::init_egl(int samples)
     }
     
     egl_exts_dpy = eglQueryString(egl.display, EGL_EXTENSIONS);
-    /*get_proc_dpy(EGL_KHR_image_base, eglCreateImageKHR);
-     get_proc_dpy(EGL_KHR_image_base, eglDestroyImageKHR);
-     get_proc_dpy(EGL_KHR_fence_sync, eglCreateSyncKHR);
-     get_proc_dpy(EGL_KHR_fence_sync, eglDestroySyncKHR);
-     get_proc_dpy(EGL_KHR_fence_sync, eglWaitSyncKHR);
-     get_proc_dpy(EGL_KHR_fence_sync, eglClientWaitSyncKHR);
-     get_proc_dpy(EGL_ANDROID_native_fence_sync, eglDupNativeFenceFDANDROID);*/
-    
     egl.modifiers_supported = has_ext(egl_exts_dpy,
                                       "EGL_EXT_image_dma_buf_import_modifiers");
     
@@ -402,13 +393,15 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
     ofLog() << "DRM_DISPLAY_MODE_LEN: " << DRM_DISPLAY_MODE_LEN;
     char mode_str[DRM_DISPLAY_MODE_LEN] = "";
     
-    char *device = NULL;
+    char *device = "/dev/dri/card1";
+    
     uint32_t format = DRM_FORMAT_XRGB8888;
     uint64_t modifier = DRM_FORMAT_MOD_LINEAR;
     
     unsigned int vrefresh = 0;
     init_drm(device, mode_str, vrefresh);
-
+    ofLog() << "device: " << device;
+    
     if(drm.mode)
     {
         ofLog() << "setup drm.mode: " << drm.mode;
@@ -452,16 +445,8 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
         
         swapBuffers();
         
-        
-        //BEGIN drm_fb_get_from_bo
-
         drm_fb_get_from_bo(bufferObject);
-        
-        
-        
-        //END drm_fb_get_from_bo
-        
-        
+
         glClearColor(255.0f,
                      255.0f,
                      255.0f,
@@ -469,7 +454,7 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
         glClear( GL_COLOR_BUFFER_BIT );
         glClear( GL_DEPTH_BUFFER_BIT );
         
-#if 0
+#if 1
         auto gl_exts = (char *) glGetString(GL_EXTENSIONS);
         ofLog(OF_LOG_VERBOSE, "GL INFO");
         ofLog(OF_LOG_VERBOSE, "  version: \"%s\"", glGetString(GL_VERSION));
@@ -516,6 +501,9 @@ void ofxRPI4Window::init_drm(const char *device, const char *mode_str, unsigned 
     
     if (drm.fd < 0) {
         ofLog(OF_LOG_ERROR, "could not open drm device\n");
+    }else
+    {
+        ofLog() << "drm.fd: " << drm.fd;
     }
     
     if (!resources) {
@@ -528,6 +516,8 @@ void ofxRPI4Window::init_drm(const char *device, const char *mode_str, unsigned 
         if (connector->connection == DRM_MODE_CONNECTED) {
             /* it's connected, let's use this! */
             ofLog() << "FOUND CONNECTION";
+            ofLog() << "connector: " << resources->connectors[i];
+
             break;
         }
         drmModeFreeConnector(connector);
@@ -698,6 +688,7 @@ drm_fb* ofxRPI4Window::drm_fb_get_from_bo(gbm_bo* bo)
     
     if (!fb)
     {
+        ofLog() << "fb IS NULL";
         fb = (drm_fb*)calloc(1, sizeof *fb);
         fb->bo = bo;
         
@@ -903,6 +894,7 @@ void ofxRPI4Window::setWindowShape(int w, int h)
 {
     currentWindowRect = ofRectangle(currentWindowRect.x,currentWindowRect.y, w, h);
 }
+
 void ofxRPI4Window::pollEvents()
 {
     //ofLog() << "pollEvents";
