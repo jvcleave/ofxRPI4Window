@@ -1,57 +1,21 @@
 #pragma once
-#define USING_DRM 1
 
 #include "ofConstants.h"
 #include "ofAppBaseWindow.h"
-#include "ofThread.h"
-#include "ofImage.h"
-#include "ofEvents.h"
 #include "ofRectangle.h"
-
-
-#include <queue>
-#include <map>
-#include <X11/Xlib.h>
-
-#include "ofGraphics.h" // used in runAppViaInfiniteLoop()
-#include "ofAppRunner.h"
-#include "ofUtils.h"
-#include "ofFileUtils.h"
 #include "ofGLProgrammableRenderer.h"
-#include "ofGLRenderer.h"
-#include "ofVectorMath.h"
-#include <assert.h>
 
-
-// x11
-#include <X11/Xutil.h>
-#include <EGL/egl.h>
-
-// include includes for both native and X11 possibilities
-#include <libudev.h>
-#include <stdbool.h>
 #include <stdio.h> // sprintf
 #include <stdlib.h>  // malloc
-#include <math.h>
 #include <fcntl.h>  // open fcntl
 #include <unistd.h> // read close
-#include <linux/joystick.h>
-
-#include "linux/kd.h"    // keyboard stuff...
-#include "termios.h"
-#include "sys/ioctl.h"
-
 #include <string.h> // strlen
-
-
-
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include <drm_fourcc.h>
 #include <gbm.h>
 
-//#include <GLES2/gl2.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <EGL/egl.h>
@@ -193,7 +157,8 @@ struct drm_fb {
     uint32_t fb_id;
 };
 
-class ofxRPI4Window : public ofAppBaseGLESWindow, public ofThread {
+class ofxRPI4Window : public ofAppBaseGLESWindow
+{
 public:
     
     EGL egl;
