@@ -126,6 +126,8 @@ public:
     EGLConfig config;
     EGLContext context;
     EGLSurface surface;
+    EGLint eglVersionMajor;
+    EGLint eglVersionMinor;
     
     PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT;
     PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
@@ -144,6 +146,8 @@ public:
         config = NULL;
         context = NULL;
         surface = NULL;
+        eglVersionMajor = 0;
+        eglVersionMinor = 0;
 
     }
 };

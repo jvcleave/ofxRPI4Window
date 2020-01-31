@@ -34,8 +34,8 @@ static string eglErrorString(EGLint err) {
 bool has_ext(const char *extension_list, const char *ext)
 {
     
-    ofLog() << "extension_list: " << extension_list;
-    ofLog() << "ext: " << ext;
+    //ofLog() << "extension_list: " << extension_list;
+    //ofLog() << "ext: " << ext;
     
     const char *ptr = extension_list;
     int len = strlen(ext);
@@ -246,10 +246,7 @@ void ofxRPI4Window::init_egl(int samples)
     
     EGLint major, minor;
     
-    static const EGLint context_attribs[] = {
-        EGL_CONTEXT_CLIENT_VERSION, 2,
-        EGL_NONE
-    };
+   
     
     const EGLint config_attribs[] = {
         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -265,13 +262,7 @@ void ofxRPI4Window::init_egl(int samples)
     const char *egl_exts_dpy = NULL;
     const char *gl_exts = NULL;
 
-    
-    
-    
     egl_exts_client = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
-    
-
-    
     
     egl.eglGetPlatformDisplayEXT = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
     egl.eglCreateImageKHR = (PFNEGLCREATEIMAGEKHRPROC)eglGetProcAddress("eglCreateImageKHR");
@@ -284,7 +275,7 @@ void ofxRPI4Window::init_egl(int samples)
     
     egl.display = egl.eglGetPlatformDisplayEXT(EGL_PLATFORM_GBM_KHR, gbm.dev, NULL);
     
-    if (!eglInitialize(egl.display, &major, &minor)) {
+    if (!eglInitialize(egl.display, &egl.eglVersionMajor, &egl.eglVersionMinor)) {
         ofLog(OF_LOG_VERBOSE, "failed to initialize\n");
     }
     
@@ -293,10 +284,12 @@ void ofxRPI4Window::init_egl(int samples)
                                       "EGL_EXT_image_dma_buf_import_modifiers");
     
     
+    
+
+
     ofLog() << "egl.modifiers_supported: " << egl.modifiers_supported;
     
-    ofLog(OF_LOG_VERBOSE, "Using display %p with EGL version %d.%d\n",
-          egl.display, major, minor);
+    ofLog(OF_LOG_VERBOSE, "Using display %p with EGL version %d.%d\n", egl.display, egl.eglVersionMajor, egl.eglVersionMinor);
     
     ofLog(OF_LOG_VERBOSE, "===================================\n");
     ofLog(OF_LOG_VERBOSE, "EGL information:\n");
@@ -310,18 +303,16 @@ void ofxRPI4Window::init_egl(int samples)
         ofLog(OF_LOG_VERBOSE, "failed to bind api EGL_OPENGL_ES_API\n");
     }
     
-    if (!egl_choose_config(egl.display, config_attribs, gbm.format,
-                           &egl.config)) {
+    if (!egl_choose_config(egl.display, config_attribs, gbm.format, &egl.config))
+    {
         ofLog(OF_LOG_VERBOSE, "failed to choose config\n");
     }else
     {
         ofLog() << "egl_choose_config PASS";
-        
-        
     }
     
-    
-    EGLint attribute_list_surface_context[] = {
+
+    EGLint context_attribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 2,
         EGL_NONE
     };
@@ -329,7 +320,7 @@ void ofxRPI4Window::init_egl(int samples)
     egl.context = eglCreateContext(egl.display,
                                    egl.config,
                                    EGL_NO_CONTEXT,
-                                   attribute_list_surface_context);
+                                   context_attribs);
     
     
     
@@ -347,8 +338,6 @@ void ofxRPI4Window::init_egl(int samples)
         ofLog() << "egl.context IS VALID: ", egl.context;
     }
     
-    
-    
     egl.surface = eglCreateWindowSurface(egl.display, egl.config,
                                          (EGLNativeWindowType)gbm.surface, NULL);
     if (egl.surface == EGL_NO_SURFACE) {
@@ -359,10 +348,7 @@ void ofxRPI4Window::init_egl(int samples)
     {
         ofLog() << "egl.surface IS VALID: ", egl.surface;
     }
-    
-    /* connect the context to the surface */
-    
-   
+        
 }
 
 
