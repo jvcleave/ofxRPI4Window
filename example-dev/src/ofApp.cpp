@@ -19,8 +19,8 @@ void ofApp::draw(){
     if(winptr->doCube)
     {
         testCube.draw(winptr->gbm);
-        ofLog() << "ofGetFrameNum: " << ofGetFrameNum();
-        ofLog() << "ofGetLastFrameTime: " << ofGetLastFrameTime();
+        //ofLog() << "ofGetFrameNum: " << ofGetFrameNum();
+        //ofLog() << "ofGetLastFrameTime: " << ofGetLastFrameTime();
     }else
     {
         auto randomColor = ofColor(ofRandom(255), ofRandom(255), ofRandom(255));

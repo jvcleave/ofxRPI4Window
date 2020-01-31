@@ -735,34 +735,6 @@ drm_fb* ofxRPI4Window::drm_fb_get_from_bo(gbm_bo* bo)
             ofLog() << "drmModeAddFB2WithModifiers: " << ret;
             
         }
-        
-        if (ret) {
-            if (flags)
-                fprintf(stderr, "Modifiers failed!\n");
-            
-            handles[0] = gbm_bo_get_handle(bo).u32;
-            handles[1] = 0;
-            handles[2] = 0;
-            handles[3] = 0;
-            
-            strides[0] = gbm_bo_get_handle(bo).u32;
-            strides[1] = 0;
-            strides[2] = 0;
-            strides[3] = 0;
-            
-            
-            //memcpy(handles, (uint32_t [4])value, 16);
-            //memcpy(strides, (uint32_t [4]){gbm_bo_get_stride(bo),0,0,0}, 16);
-            memset(offsets, 0, 16);
-            ret = drmModeAddFB2(drm_fd, width, height, format,
-                                handles, strides, offsets, &fb->fb_id, 0);
-        }
-        
-        if (ret) {
-            printf("failed to create fb: %s\n", strerror(errno));
-            //free(fb);
-            //return NULL;
-        }
     }else
     {
         //ofLog() << "FB IS VALID";
