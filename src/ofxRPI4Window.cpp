@@ -1,172 +1,7 @@
 #include "ofxRPI4Window.h"
 
-#include "ofGraphics.h" // used in runAppViaInfiniteLoop()
-#include "ofAppRunner.h"
-#include "ofUtils.h"
-#include "ofFileUtils.h"
-#include "ofGLProgrammableRenderer.h"
-#include "ofGLRenderer.h"
-#include "ofVectorMath.h"
-#include <assert.h>
+#define __func__ __PRETTY_FUNCTION__
 
-
-// x11
-#include <X11/Xutil.h>
-#include <EGL/egl.h>
-
-// include includes for both native and X11 possibilities
-#include <libudev.h>
-#include <stdbool.h>
-#include <stdio.h> // sprintf
-#include <stdlib.h>  // malloc
-#include <math.h>
-#include <fcntl.h>  // open fcntl
-#include <unistd.h> // read close
-#include <linux/joystick.h>
-
-#include "linux/kd.h"    // keyboard stuff...
-#include "termios.h"
-#include "sys/ioctl.h"
-
-#include <string.h> // strlen
-
-using namespace std;
-
-
-
-#include <xf86drm.h>
-#include <xf86drmMode.h>
-#include <drm_fourcc.h>
-#include <gbm.h>
-
-//#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-
-#ifndef EGL_KHR_platform_gbm
-#define EGL_KHR_platform_gbm 1
-#define EGL_PLATFORM_GBM_KHR              0x31D7
-#endif /* EGL_KHR_platform_gbm */
-
-
-typedef EGLDisplay (EGLAPIENTRYP PFNEGLGETPLATFORMDISPLAYEXTPROC) (EGLenum platform, void *native_display, const EGLint *attrib_list);
-
-class CRTC
-{
-public:
-    
-    drmModeCrtc *crtc;
-    drmModeObjectProperties *props;
-    drmModePropertyRes **props_info;
-    
-    CRTC()
-    {
-        crtc = NULL;
-        props = NULL;
-        props_info = NULL;
-        
-    }
-    
-};
-
-class Connector {
-public:
-    
-    drmModeConnector *connector;
-    drmModeObjectProperties *props;
-    drmModePropertyRes **props_info;
-    
-    Connector()
-    {
-        connector = NULL;
-        props = NULL;
-        props_info = NULL;
-    }
-    
-};
-
-class DRM
-{
-public:
-    
-    int fd;
-    
-    
-    CRTC crtc;
-    Connector connector;
-    int crtc_index;
-    int kms_in_fence_fd;
-    int kms_out_fence_fd;
-    
-    drmModeModeInfo *mode;
-    uint32_t crtc_id;
-    uint32_t connector_id;
-    
-    int (*run)(const struct gbm *gbm, const struct egl *egl);
-    
-    DRM()
-    {
-        fd = 0;
-        mode = NULL;
-    }
-    
-};
-
-class GBM
-{
-public:
-    
-    struct gbm_device *dev;
-    struct gbm_surface *surface;
-    uint32_t format;
-    int width, height;
-    
-    GBM()
-    {
-        
-        format = 0;
-        width = 0;
-        height = 0;
-        
-    }
-    
-};
-
-class EGL {
-    
-public:
-    
-    EGLDisplay display;
-    EGLConfig config;
-    EGLContext context;
-    EGLSurface surface;
-    
-    PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT;
-    PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
-    PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR;
-    PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
-    PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
-    PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR;
-    PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
-    
-    bool modifiers_supported;
-    
-    void (*draw)(unsigned i);
-    
-    EGL()
-    {
-        
-        display = NULL;
-        config = NULL;
-        context = NULL;
-        surface = NULL;
-        
-        
-        
-        
-    }
-};
 
 static bool has_ext(const char *extension_list, const char *ext)
 {
@@ -291,11 +126,8 @@ static string eglErrorString(EGLint err) {
  egl->name = (void *)eglGetProcAddress(name);
  }
  }*/
-EGL init_egl(GBM& gbm, int samples)
+void ofxRPI4Window::init_egl(int samples)
 {
-    
-    EGL egl;
-    
     
     EGLint major, minor;
     
@@ -421,9 +253,7 @@ EGL init_egl(GBM& gbm, int samples)
     
     /* connect the context to the surface */
     
-    
-    return egl;
-    
+   
 }
 
 int get_resources(int fd, drmModeRes **resources)
@@ -520,7 +350,7 @@ int find_drm_device(drmModeRes **resources)
     return fd;
 }
 
-int init_drm(DRM& drm, const char *device, const char *mode_str, unsigned int vrefresh)
+void ofxRPI4Window::init_drm(const char *device, const char *mode_str, unsigned int vrefresh)
 {
     drmModeRes *resources;
     drmModeConnector *connector = NULL;
@@ -537,13 +367,11 @@ int init_drm(DRM& drm, const char *device, const char *mode_str, unsigned int vr
     }
     
     if (drm.fd < 0) {
-        ofLog(OF_LOG_VERBOSE, "could not open drm device\n");
-        return -1;
+        ofLog(OF_LOG_ERROR, "could not open drm device\n");
     }
     
     if (!resources) {
-        ofLog(OF_LOG_VERBOSE, "drmModeGetResources failed: %s\n", strerror(errno));
-        return -1;
+        ofLog(OF_LOG_ERROR, "drmModeGetResources failed: %s\n", strerror(errno));
     }
     
     /* find a connected connector: */
@@ -562,8 +390,7 @@ int init_drm(DRM& drm, const char *device, const char *mode_str, unsigned int vr
         /* we could be fancy and listen for hotplug events and wait for
          * a connector..
          */
-        ofLog(OF_LOG_VERBOSE, "no connected connector!\n");
-        return -1;
+        ofLog(OF_LOG_ERROR, "no connected connector!\n");
     }
     
     /* find user requested mode: */
@@ -619,7 +446,6 @@ int init_drm(DRM& drm, const char *device, const char *mode_str, unsigned int vr
     
     if (!drm.mode) {
         ofLog(OF_LOG_VERBOSE, "could not find mode!\n");
-        return -1;
     }
     
     /* find encoder: */
@@ -637,7 +463,6 @@ int init_drm(DRM& drm, const char *device, const char *mode_str, unsigned int vr
         uint32_t crtc_id = find_crtc_for_connector(drm, resources, connector);
         if (crtc_id == 0) {
             ofLog(OF_LOG_VERBOSE, "no crtc found!\n");
-            return -1;
         }else
         {
             ofLog() << "FOUND crtc_id: " << crtc_id;
@@ -658,26 +483,12 @@ int init_drm(DRM& drm, const char *device, const char *mode_str, unsigned int vr
     drm.connector_id = connector->connector_id;
     ofLog() << "FOUND drm.connector_id: " << drm.connector_id;
     
-    return 0;
 }
 
 
-DRM init_drm_legacy(const char *device, const char *mode_str, unsigned int vrefresh)
-{
-    
-    DRM drm;
-    
-    auto ret = init_drm(drm, device, mode_str, vrefresh);
-    
-    ofLog() << "ret: " << ret;
-    
-    return drm;
-    
-}
 
-GBM init_gbm(int drm_fd, int w, int h, uint32_t format, uint64_t modifier)
+void ofxRPI4Window::init_gbm(int drm_fd, int w, int h, uint32_t format, uint64_t modifier)
 {
-    GBM gbm;
     ofLog() << "drm_fd: " << drm_fd;
     
     gbm.dev = gbm_create_device(drm_fd);
@@ -714,22 +525,67 @@ GBM init_gbm(int drm_fd, int w, int h, uint32_t format, uint64_t modifier)
     gbm.height = h;
     ofLog() << "gbm.width : " << gbm.width;
     ofLog() << "gbm.height : " << gbm.height;
-    return gbm;
+    
+    currentWindowRect = ofRectangle(0, 0, gbm.width, gbm.height);
+    ofLog() << "currentWindowRect: " << currentWindowRect;
+    
 }
 
 
 ofxRPI4Window::ofxRPI4Window() {
-    
+    orientation = OF_ORIENTATION_DEFAULT;
+    bo = NULL;
+
 }
 ofxRPI4Window::ofxRPI4Window(const ofGLESWindowSettings & settings) {
     ofLog() << "CTOR CALLED WITH settings";
     setup(settings);
 }
 
+static void drawFunction(unsigned i)
+{
+    ofLog() << __func__ << " : " << i;
+    
+}
+static int onDRMRun()
+{
+    ofLog() << "onDRMRun";
+    return 0;
+    
+}
+
+static void page_flip_handler(int fd, unsigned int frame,
+                              unsigned int sec, unsigned int usec, void *data)
+{
+    /* suppress 'unused parameter' warnings */
+    (void)fd, (void)frame, (void)sec, (void)usec;
+    
+    int *waiting_for_flip = (int*)data;
+    *waiting_for_flip = 0;
+}
+
+static void
+drm_fb_destroy_callback(struct gbm_bo *bo, void *data)
+{
+    
+    ofLog() << __func__;
+    
+    int drm_fd = gbm_device_get_fd(gbm_bo_get_device(bo));
+    struct drm_fb *fb = (drm_fb*)data;
+    
+    if (fb->fb_id)
+        drmModeRmFB(drm_fd, fb->fb_id);
+    
+    free(fb);
+}
+
 void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
 {
  
-    
+    bEnableSetupScreen = true;
+    windowMode = OF_WINDOW;
+    glesVersion = settings.glesVersion;
+
     //ofAppBaseGLESWindow::setup(settings);
     
     ofLog() << "setup ofGLESWindowSettings";
@@ -741,8 +597,8 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
     uint64_t modifier = DRM_FORMAT_MOD_LINEAR;
     
     unsigned int vrefresh = 0;
-    auto drm = init_drm_legacy(device, mode_str, vrefresh);
-    
+    init_drm(device, mode_str, vrefresh);
+
     if(drm.mode)
     {
         ofLog() << "setup drm.mode: " << drm.mode;
@@ -768,42 +624,481 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
     }
     if(drm.mode->hdisplay && drm.mode->vdisplay)
     {
-        auto gbm = init_gbm(drm.fd, drm.mode->hdisplay, drm.mode->vdisplay, format, modifier);
+        init_gbm(drm.fd, drm.mode->hdisplay, drm.mode->vdisplay, format, modifier);
         int samples = 0;
-        auto egl = init_egl(gbm, samples);
+        init_egl(samples);
+        egl.draw = drawFunction;
+        
+    
+        
+      
         currentRenderer = make_shared<ofGLProgrammableRenderer>(this);
-        eglMakeCurrent(egl.display, egl.surface, egl.surface, egl.context);
+        makeCurrent();
         
+        evctx = {
+            .version = 2,
+            .page_flip_handler = page_flip_handler,
+        };
+        
+        swapBuffers();
+        
+        
+        //BEGIN drm_fb_get_from_bo
+
+        drm_fb_get_from_bo(bo);
+        
+        
+        
+        //END drm_fb_get_from_bo
+        
+        
+        glClearColor(255.0f,
+                     255.0f,
+                     255.0f,
+                     255.0f);
+        glClear( GL_COLOR_BUFFER_BIT );
+        glClear( GL_DEPTH_BUFFER_BIT );
+        
+#if 0
         auto gl_exts = (char *) glGetString(GL_EXTENSIONS);
-        ofLog(OF_LOG_VERBOSE, "OpenGL ES 2.x information:\n");
-        ofLog(OF_LOG_VERBOSE, "  version: \"%s\"\n", glGetString(GL_VERSION));
-        ofLog(OF_LOG_VERBOSE, "  shading language version: \"%s\"\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-        ofLog(OF_LOG_VERBOSE, "  vendor: \"%s\"\n", glGetString(GL_VENDOR));
-        ofLog(OF_LOG_VERBOSE, "  renderer: \"%s\"\n", glGetString(GL_RENDERER));
-        ofLog(OF_LOG_VERBOSE, "  extensions: \"%s\"\n", gl_exts);
+        ofLog(OF_LOG_VERBOSE, "GL INFO");
+        ofLog(OF_LOG_VERBOSE, "  version: \"%s\"", glGetString(GL_VERSION));
+        ofLog(OF_LOG_VERBOSE, "  shading language version: \"%s\"", glGetString(GL_SHADING_LANGUAGE_VERSION));
+        ofLog(OF_LOG_VERBOSE, "  vendor: \"%s\"", glGetString(GL_VENDOR));
+        ofLog(OF_LOG_VERBOSE, "  renderer: \"%s\"", glGetString(GL_RENDERER));
+        ofLog(OF_LOG_VERBOSE, "  extensions: \"%s\"", gl_exts);
         ofLog(OF_LOG_VERBOSE, "===================================\n");
-        
         //get_proc_gl(GL_OES_EGL_image, glEGLImageTargetTexture2DOES);
+        
+        ofLog() << "-----EGL-----";
+        //ofLog() << "EGL_VERSION_MAJOR = " << eglVersionMajor;
+        //ofLog() << "EGL_VERSION_MINOR = " << eglVersionMinor;
+        ofLog() << "EGL_CLIENT_APIS = " << eglQueryString(getEGLDisplay(), EGL_CLIENT_APIS);
+        ofLog() << "EGL_VENDOR = "  << eglQueryString(getEGLDisplay(), EGL_VENDOR);
+        ofLog() << "EGL_VERSION = " << eglQueryString(getEGLDisplay(), EGL_VERSION);
+        ofLog() << "EGL_EXTENSIONS = " << eglQueryString(getEGLDisplay(), EGL_EXTENSIONS);
+        ofLog() << "GL_RENDERER = " << glGetString(GL_RENDERER);
+        ofLog() << "GL_VERSION  = " << glGetString(GL_VERSION);
+        ofLog() << "GL_VENDOR   = " << glGetString(GL_VENDOR);
+        ofLog() << "-------------";
+#endif
     }
     
     
     
 }
 
+drm_fb* ofxRPI4Window::drm_fb_get_from_bo(gbm_bo* bo)
+{
+    
+    ofLog() << __func__;
+    if(bo == NULL)
+    {
+        bo = gbm_surface_lock_front_buffer(gbm.surface);
+
+    }
+    
+    int drm_fd = gbm_device_get_fd(gbm_bo_get_device(bo));
+    drm_fb* fb = (drm_fb*)gbm_bo_get_user_data(bo);
+    uint32_t width, height, format,
+    strides[4] = {0}, handles[4] = {0},
+    offsets[4] = {0}, flags = 0;
+    int ret = -1;
+    
+    if (!fb)
+    {
+        fb = (drm_fb*)calloc(1, sizeof *fb);
+        fb->bo = bo;
+        
+        width = gbm_bo_get_width(bo);
+        height = gbm_bo_get_height(bo);
+        format = gbm_bo_get_format(bo);
+        ofLog() << "width: " << width;
+        ofLog() << "height: " << height;
+        ofLog() << "format: " << format;
+        
+        if (gbm_bo_get_modifier && gbm_bo_get_plane_count &&
+            gbm_bo_get_stride_for_plane && gbm_bo_get_offset) {
+            
+            uint64_t modifiers[4] = {0};
+            modifiers[0] = gbm_bo_get_modifier(bo);
+            const int num_planes = gbm_bo_get_plane_count(bo);
+            for (int i = 0; i < num_planes; i++) {
+                strides[i] = gbm_bo_get_stride_for_plane(bo, i);
+                handles[i] = gbm_bo_get_handle(bo).u32;
+                offsets[i] = gbm_bo_get_offset(bo, i);
+                modifiers[i] = modifiers[0];
+            }
+            
+            if (modifiers[0]) {
+                flags = DRM_MODE_FB_MODIFIERS;
+                printf("Using modifier %" PRIx64 "\n", modifiers[0]);
+            }
+            
+            ret = drmModeAddFB2WithModifiers(drm_fd, width, height,
+                                             format, handles, strides, offsets,
+                                             modifiers, &fb->fb_id, flags);
+            
+            ofLog() << "drmModeAddFB2WithModifiers: " << ret;
+            
+        }
+        
+        if (ret) {
+            if (flags)
+                fprintf(stderr, "Modifiers failed!\n");
+            
+            handles[0] = gbm_bo_get_handle(bo).u32;
+            handles[1] = 0;
+            handles[2] = 0;
+            handles[3] = 0;
+            
+            strides[0] = gbm_bo_get_handle(bo).u32;
+            strides[1] = 0;
+            strides[2] = 0;
+            strides[3] = 0;
+            
+            
+            //memcpy(handles, (uint32_t [4])value, 16);
+            //memcpy(strides, (uint32_t [4]){gbm_bo_get_stride(bo),0,0,0}, 16);
+            memset(offsets, 0, 16);
+            ret = drmModeAddFB2(drm_fd, width, height, format,
+                                handles, strides, offsets, &fb->fb_id, 0);
+        }
+        
+        if (ret) {
+            printf("failed to create fb: %s\n", strerror(errno));
+            //free(fb);
+            //return NULL;
+        }
+    }else
+    {
+        ofLog() << "FB IS VALID";
+    }
+    
+    
+    if(fb)
+    {
+        auto result = drmModeSetCrtc(drm.fd, drm.crtc_id, fb->fb_id, 0, 0, &drm.connector_id, 1, drm.mode);
+        ofLog() << "result: " << result;
+    }
+    
+    
+    
+    
+    gbm_bo_set_user_data(bo, fb, drm_fb_destroy_callback);
+    return fb;
+}
+
+
+
+
+void ofxRPI4Window::makeCurrent()
+{
+    eglMakeCurrent(egl.display, egl.surface, egl.surface, egl.context);
+
+}
+
 void ofxRPI4Window::update()
 {
+    //ofLog() << "update";
     coreEvents.notifyUpdate();
     
 }
 
-
-void ofxRPI4Window::draw()
+int ofxRPI4Window::getWidth()
 {
-    ofLog() << "draw";
+    //ofLog() << __func__ << currentWindowRect.width;
+    return currentWindowRect.width;
+}
+
+int ofxRPI4Window::getHeight()
+{
+    //ofLog() << __func__ << currentWindowRect.height;
+
+    return currentWindowRect.height;
+}
+
+glm::vec2 ofxRPI4Window::getScreenSize()
+{
     
+    ofLog() << __func__;
+    return {currentWindowRect.getWidth(), currentWindowRect.getHeight()};
+}
+
+glm::vec2 ofxRPI4Window::getWindowSize()
+{
+    //ofLog() << __func__;
+    return {currentWindowRect.width, currentWindowRect.height};
+}
+
+//------------------------------------------------------------
+glm::vec2 ofxRPI4Window::getWindowPosition(){
+    ofLog() << __func__;
+    return glm::vec2(currentWindowRect.getPosition());
+}
+
+
+void ofxRPI4Window::swapBuffers()
+{
+    ofLog() << __func__;
+    
+    EGLBoolean success = eglSwapBuffers(egl.display, egl.surface);
+    if(!success) {
+        GLint error = eglGetError();
+        ofLog() << "eglSwapBuffers failed: " << eglErrorString(error);
+    }
     
 }
 
+void ofxRPI4Window::startRender()
+{
+    ofLog() << __func__;
+
+    renderer()->startRender();
+}
+
+void ofxRPI4Window::finishRender()
+{
+    ofLog() << __func__;
+    renderer()->finishRender();
+}
+
+
+
+static const char *vertex_shader_source =
+"uniform mat4 modelviewMatrix;      \n"
+"uniform mat4 modelviewprojectionMatrix;\n"
+"uniform mat3 normalMatrix;         \n"
+"                                   \n"
+"attribute vec4 in_position;        \n"
+"attribute vec3 in_normal;          \n"
+"attribute vec4 in_color;           \n"
+"\n"
+"vec4 lightSource = vec4(2.0, 2.0, 20.0, 0.0);\n"
+"                                   \n"
+"varying vec4 vVaryingColor;        \n"
+"                                   \n"
+"void main()                        \n"
+"{                                  \n"
+"    gl_Position = modelviewprojectionMatrix * in_position;\n"
+"    vec3 vEyeNormal = normalMatrix * in_normal;\n"
+"    vec4 vPosition4 = modelviewMatrix * in_position;\n"
+"    vec3 vPosition3 = vPosition4.xyz / vPosition4.w;\n"
+"    vec3 vLightDir = normalize(lightSource.xyz - vPosition3);\n"
+"    float diff = max(0.0, dot(vEyeNormal, vLightDir));\n"
+"    vVaryingColor = vec4(diff * in_color.rgb, 1.0);\n"
+"}                                  \n";
+
+static const char *fragment_shader_source =
+"precision mediump float;           \n"
+"                                   \n"
+"varying vec4 vVaryingColor;        \n"
+"                                   \n"
+"void main()                        \n"
+"{                                  \n"
+"    gl_FragColor = vVaryingColor;  \n"
+"}                                  \n";
+
+int create_program(const char *vs_src, const char *fs_src)
+{
+    GLuint vertex_shader, fragment_shader, program;
+    GLint ret;
+    
+    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    
+    glShaderSource(vertex_shader, 1, &vs_src, NULL);
+    glCompileShader(vertex_shader);
+    
+    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &ret);
+    if (!ret) {
+        char *log;
+        
+        printf("vertex shader compilation failed!:\n");
+        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &ret);
+        /*if (ret > 1) {
+            log = malloc(ret);
+            glGetShaderInfoLog(vertex_shader, ret, NULL, log);
+            printf("%s", log);
+            free(log);
+        }*/
+        
+        return -1;
+    }
+    
+    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    
+    glShaderSource(fragment_shader, 1, &fs_src, NULL);
+    glCompileShader(fragment_shader);
+    
+    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &ret);
+    if (!ret) {
+        char *log;
+        
+        printf("fragment shader compilation failed!:\n");
+        glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &ret);
+        
+        /*if (ret > 1) {
+            log = malloc(ret);
+            glGetShaderInfoLog(fragment_shader, ret, NULL, log);
+            printf("%s", log);
+            free(log);
+        }*/
+        
+        return -1;
+    }
+    
+    program = glCreateProgram();
+    
+    glAttachShader(program, vertex_shader);
+    glAttachShader(program, fragment_shader);
+    
+    return program;
+}
+int frameCounter = 0;
+
+void ofxRPI4Window::draw()
+{
+    frameCounter ++;
+    
+    ofLog() << frameCounter;
+    aspect = (GLfloat)(gbm.height) / (GLfloat)(gbm.width);
+
+    gbm_bo *next_bo = NULL;
+    int waiting_for_flip = 1;
+    
+    //egl->draw(i++);
+    //printf("EGL draw \n");
+    
+    int i = frameCounter;
+    currentRenderer->startRender();
+    if( bEnableSetupScreen )
+    {
+        currentRenderer->setupScreen();
+    }
+    
+    
+    coreEvents.notifyDraw();
+    currentRenderer->finishRender();
+    swapBuffers();
+
+#if 0
+    ESMatrix modelview;
+    
+    /* clear the color buffer */
+    glClearColor(0.5, 0.5, 0.5, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    
+    esMatrixLoadIdentity(&modelview);
+    esTranslate(&modelview, 0.0f, 0.0f, -8.0f);
+    esRotate(&modelview, 45.0f + (0.25f * i), 1.0f, 0.0f, 0.0f);
+    esRotate(&modelview, 45.0f - (0.5f * i), 0.0f, 1.0f, 0.0f);
+    esRotate(&modelview, 10.0f + (0.15f * i), 0.0f, 0.0f, 1.0f);
+    
+    ESMatrix projection;
+    esMatrixLoadIdentity(&projection);
+    esFrustum(&projection, -2.8f, +2.8f, -2.8f * aspect, +2.8f * aspect, 6.0f, 10.0f);
+    
+    ESMatrix modelviewprojection;
+    esMatrixLoadIdentity(&modelviewprojection);
+    esMatrixMultiply(&modelviewprojection, &modelview, &projection);
+    
+    float normal[9];
+    normal[0] = modelview.m[0][0];
+    normal[1] = modelview.m[0][1];
+    normal[2] = modelview.m[0][2];
+    normal[3] = modelview.m[1][0];
+    normal[4] = modelview.m[1][1];
+    normal[5] = modelview.m[1][2];
+    normal[6] = modelview.m[2][0];
+    normal[7] = modelview.m[2][1];
+    normal[8] = modelview.m[2][2];
+    
+    glUniformMatrix4fv(modelviewmatrix, 1, GL_FALSE, &modelview.m[0][0]);
+    glUniformMatrix4fv(modelviewprojectionmatrix, 1, GL_FALSE, &modelviewprojection.m[0][0]);
+    glUniformMatrix3fv(normalmatrix, 1, GL_FALSE, normal);
+    
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_TRIANGLE_STRIP, 4, 4);
+    glDrawArrays(GL_TRIANGLE_STRIP, 8, 4);
+    glDrawArrays(GL_TRIANGLE_STRIP, 12, 4);
+    glDrawArrays(GL_TRIANGLE_STRIP, 16, 4);
+    glDrawArrays(GL_TRIANGLE_STRIP, 20, 4);
+#endif
+    
+    next_bo = gbm_surface_lock_front_buffer(gbm.surface);
+    
+    ofLog () << "next_bo: " << next_bo;
+    drm_fb* fb = drm_fb_get_from_bo(next_bo);
+    if (!fb) {
+        fprintf(stderr, "Failed to get a new framebuffer BO\n");
+    }
+    
+    /*
+     * Here you could also update drm plane layers if you want
+     * hw composition
+     */
+    
+    int ret = drmModePageFlip(drm.fd, drm.crtc_id, fb->fb_id,
+                          DRM_MODE_PAGE_FLIP_EVENT, &waiting_for_flip);
+    if (ret) {
+        printf("failed to queue page flip: %s\n", strerror(errno));
+    }
+    
+    while (waiting_for_flip) {
+        FD_ZERO(&fds);
+        FD_SET(0, &fds);
+        FD_SET(drm.fd, &fds);
+        
+        ret = select(drm.fd + 1, &fds, NULL, NULL, NULL);
+        if (ret < 0) {
+            printf("select err: %s\n", strerror(errno));
+        } else if (ret == 0) {
+            printf("select timeout!\n");
+        } else if (FD_ISSET(0, &fds)) {
+            printf("user interrupted!\n");
+        }
+        drmHandleEvent(drm.fd, &evctx);
+    }
+    
+    /* release last buffer to render on again: */
+    gbm_surface_release_buffer(gbm.surface, bo);
+    bo = next_bo;
+    /*
+    aspect = (GLfloat)(gbm.height) / (GLfloat)(gbm.width);
+    //ofLog() << "aspect: " << aspect;
+    if(program == NULL)
+    {
+        program = create_program(vertex_shader_source, fragment_shader_source);
+        if(program)
+        {
+            ofLog() << "SHADER PASS";
+        }else
+        {
+            ofLog() << "SHADER FAIL";
+
+        }
+    }*/
+
+
+    
+    /*
+    currentRenderer->startRender();
+    if( bEnableSetupScreen )
+    {
+        currentRenderer->setupScreen();
+    }
+
+    
+    coreEvents.notifyDraw();
+    currentRenderer->finishRender();
+    swapBuffers();
+    */
+}
+
+void ofxRPI4Window::setWindowShape(int w, int h)
+{
+    currentWindowRect = ofRectangle(currentWindowRect.x,currentWindowRect.y, w, h);
+}
 void ofxRPI4Window::pollEvents()
 {
     ofLog() << "pollEvents";
@@ -814,11 +1109,46 @@ ofCoreEvents & ofxRPI4Window::events(){
     return coreEvents;
 }
 
+
+void ofxRPI4Window::enableSetupScreen(){
+    bEnableSetupScreen = true;
+}
+
+//------------------------------------------------------------
+void ofxRPI4Window::disableSetupScreen(){
+    bEnableSetupScreen = false;
+}
+
+
+
+EGLDisplay ofxRPI4Window::getEGLDisplay()
+{
+    ofLog() << __func__;
+    return egl.display;
+}
+
+EGLContext ofxRPI4Window::getEGLContext()
+{
+    ofLog() << __func__;
+
+    return egl.context;
+}
+
+EGLSurface ofxRPI4Window::getEGLSurface()
+{
+    ofLog() << __func__;
+
+    return egl.surface;
+}
+
 ofxRPI4Window::~ofxRPI4Window()
 {
     
 }
 
 shared_ptr<ofBaseRenderer> & ofxRPI4Window::renderer(){
+    
+    //ofLog() << __func__;
+
     return currentRenderer;
 }
