@@ -534,7 +534,7 @@ void ofxRPI4Window::init_gbm(int drm_fd, int w, int h, uint32_t format, uint64_t
 
 ofxRPI4Window::ofxRPI4Window() {
     orientation = OF_ORIENTATION_DEFAULT;
-    bo = NULL;
+    bufferObject = NULL;
 
 }
 ofxRPI4Window::ofxRPI4Window(const ofGLESWindowSettings & settings) {
@@ -542,24 +542,16 @@ ofxRPI4Window::ofxRPI4Window(const ofGLESWindowSettings & settings) {
     setup(settings);
 }
 
-static void drawFunction(unsigned i)
-{
-    ofLog() << __func__ << " : " << i;
-    
-}
-static int onDRMRun()
-{
-    ofLog() << "onDRMRun";
-    return 0;
-    
-}
+
+
 
 static void page_flip_handler(int fd, unsigned int frame,
                               unsigned int sec, unsigned int usec, void *data)
 {
     /* suppress 'unused parameter' warnings */
     (void)fd, (void)frame, (void)sec, (void)usec;
-    
+    //ofLog() << __func__;
+
     int *waiting_for_flip = (int*)data;
     *waiting_for_flip = 0;
 }
@@ -627,7 +619,6 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
         init_gbm(drm.fd, drm.mode->hdisplay, drm.mode->vdisplay, format, modifier);
         int samples = 0;
         init_egl(samples);
-        egl.draw = drawFunction;
         
     
         
@@ -645,7 +636,7 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
         
         //BEGIN drm_fb_get_from_bo
 
-        drm_fb_get_from_bo(bo);
+        drm_fb_get_from_bo(bufferObject);
         
         
         
@@ -691,7 +682,7 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
 drm_fb* ofxRPI4Window::drm_fb_get_from_bo(gbm_bo* bo)
 {
     
-    ofLog() << __func__;
+    //ofLog() << __func__;
     if(bo == NULL)
     {
         bo = gbm_surface_lock_front_buffer(gbm.surface);
@@ -772,14 +763,14 @@ drm_fb* ofxRPI4Window::drm_fb_get_from_bo(gbm_bo* bo)
         }
     }else
     {
-        ofLog() << "FB IS VALID";
+        //ofLog() << "FB IS VALID";
     }
     
     
     if(fb)
     {
         auto result = drmModeSetCrtc(drm.fd, drm.crtc_id, fb->fb_id, 0, 0, &drm.connector_id, 1, drm.mode);
-        ofLog() << "result: " << result;
+        //ofLog() << "drmModeSetCrtc result: " << result;
     }
     
     
@@ -840,7 +831,7 @@ glm::vec2 ofxRPI4Window::getWindowPosition(){
 
 void ofxRPI4Window::swapBuffers()
 {
-    ofLog() << __func__;
+   // ofLog() << __func__;
     
     EGLBoolean success = eglSwapBuffers(egl.display, egl.surface);
     if(!success) {
@@ -865,105 +856,16 @@ void ofxRPI4Window::finishRender()
 
 
 
-static const char *vertex_shader_source =
-"uniform mat4 modelviewMatrix;      \n"
-"uniform mat4 modelviewprojectionMatrix;\n"
-"uniform mat3 normalMatrix;         \n"
-"                                   \n"
-"attribute vec4 in_position;        \n"
-"attribute vec3 in_normal;          \n"
-"attribute vec4 in_color;           \n"
-"\n"
-"vec4 lightSource = vec4(2.0, 2.0, 20.0, 0.0);\n"
-"                                   \n"
-"varying vec4 vVaryingColor;        \n"
-"                                   \n"
-"void main()                        \n"
-"{                                  \n"
-"    gl_Position = modelviewprojectionMatrix * in_position;\n"
-"    vec3 vEyeNormal = normalMatrix * in_normal;\n"
-"    vec4 vPosition4 = modelviewMatrix * in_position;\n"
-"    vec3 vPosition3 = vPosition4.xyz / vPosition4.w;\n"
-"    vec3 vLightDir = normalize(lightSource.xyz - vPosition3);\n"
-"    float diff = max(0.0, dot(vEyeNormal, vLightDir));\n"
-"    vVaryingColor = vec4(diff * in_color.rgb, 1.0);\n"
-"}                                  \n";
 
-static const char *fragment_shader_source =
-"precision mediump float;           \n"
-"                                   \n"
-"varying vec4 vVaryingColor;        \n"
-"                                   \n"
-"void main()                        \n"
-"{                                  \n"
-"    gl_FragColor = vVaryingColor;  \n"
-"}                                  \n";
-
-int create_program(const char *vs_src, const char *fs_src)
-{
-    GLuint vertex_shader, fragment_shader, program;
-    GLint ret;
-    
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    
-    glShaderSource(vertex_shader, 1, &vs_src, NULL);
-    glCompileShader(vertex_shader);
-    
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &ret);
-    if (!ret) {
-        char *log;
-        
-        printf("vertex shader compilation failed!:\n");
-        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &ret);
-        /*if (ret > 1) {
-            log = malloc(ret);
-            glGetShaderInfoLog(vertex_shader, ret, NULL, log);
-            printf("%s", log);
-            free(log);
-        }*/
-        
-        return -1;
-    }
-    
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    
-    glShaderSource(fragment_shader, 1, &fs_src, NULL);
-    glCompileShader(fragment_shader);
-    
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &ret);
-    if (!ret) {
-        char *log;
-        
-        printf("fragment shader compilation failed!:\n");
-        glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &ret);
-        
-        /*if (ret > 1) {
-            log = malloc(ret);
-            glGetShaderInfoLog(fragment_shader, ret, NULL, log);
-            printf("%s", log);
-            free(log);
-        }*/
-        
-        return -1;
-    }
-    
-    program = glCreateProgram();
-    
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    
-    return program;
-}
 int frameCounter = 0;
 
 void ofxRPI4Window::draw()
 {
     frameCounter ++;
     
-    ofLog() << frameCounter;
+    //ofLog() << __func__ << " frameCounter: " << frameCounter;
     aspect = (GLfloat)(gbm.height) / (GLfloat)(gbm.width);
 
-    gbm_bo *next_bo = NULL;
     int waiting_for_flip = 1;
     
     //egl->draw(i++);
@@ -974,6 +876,7 @@ void ofxRPI4Window::draw()
     if( bEnableSetupScreen )
     {
         currentRenderer->setupScreen();
+        bEnableSetupScreen = false;
     }
     
     
@@ -1025,9 +928,9 @@ void ofxRPI4Window::draw()
     glDrawArrays(GL_TRIANGLE_STRIP, 20, 4);
 #endif
     
-    next_bo = gbm_surface_lock_front_buffer(gbm.surface);
+    gbm_bo* next_bo = gbm_surface_lock_front_buffer(gbm.surface);
     
-    ofLog () << "next_bo: " << next_bo;
+    //ofLog () << "next_bo: " << next_bo;
     drm_fb* fb = drm_fb_get_from_bo(next_bo);
     if (!fb) {
         fprintf(stderr, "Failed to get a new framebuffer BO\n");
@@ -1045,6 +948,8 @@ void ofxRPI4Window::draw()
     }
     
     while (waiting_for_flip) {
+        ofLog() << "waiting_for_flip";
+        
         FD_ZERO(&fds);
         FD_SET(0, &fds);
         FD_SET(drm.fd, &fds);
@@ -1061,38 +966,9 @@ void ofxRPI4Window::draw()
     }
     
     /* release last buffer to render on again: */
-    gbm_surface_release_buffer(gbm.surface, bo);
-    bo = next_bo;
-    /*
-    aspect = (GLfloat)(gbm.height) / (GLfloat)(gbm.width);
-    //ofLog() << "aspect: " << aspect;
-    if(program == NULL)
-    {
-        program = create_program(vertex_shader_source, fragment_shader_source);
-        if(program)
-        {
-            ofLog() << "SHADER PASS";
-        }else
-        {
-            ofLog() << "SHADER FAIL";
+    gbm_surface_release_buffer(gbm.surface, bufferObject);
+    bufferObject = next_bo;
 
-        }
-    }*/
-
-
-    
-    /*
-    currentRenderer->startRender();
-    if( bEnableSetupScreen )
-    {
-        currentRenderer->setupScreen();
-    }
-
-    
-    coreEvents.notifyDraw();
-    currentRenderer->finishRender();
-    swapBuffers();
-    */
 }
 
 void ofxRPI4Window::setWindowShape(int w, int h)
@@ -1101,7 +977,7 @@ void ofxRPI4Window::setWindowShape(int w, int h)
 }
 void ofxRPI4Window::pollEvents()
 {
-    ofLog() << "pollEvents";
+    //ofLog() << "pollEvents";
 
 }
 

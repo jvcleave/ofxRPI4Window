@@ -153,11 +153,7 @@ public:
 
 
 
-enum ofAppEGLWindowType {
-    OF_APP_WINDOW_AUTO,
-    OF_APP_WINDOW_NATIVE,
-    OF_APP_WINDOW_X11
-};
+
 
 class EGL {
     
@@ -177,9 +173,7 @@ public:
     PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
     
     bool modifiers_supported;
-    
-    void (*draw)(unsigned i);
-    
+        
     EGL()
     {
         
@@ -193,24 +187,6 @@ public:
 
 typedef std::map<EGLint,EGLint> ofEGLAttributeList;
 
-
-struct ofxRPI4WindowSettings: public ofGLESWindowSettings {
-public:
-    ofAppEGLWindowType eglWindowPreference; ///< what window type is preferred?
-    EGLint eglWindowOpacity; ///< 0-255 window alpha value
-    
-    ofEGLAttributeList frameBufferAttributes;
-    // surface creation
-    ofEGLAttributeList windowSurfaceAttributes;
-    
-    ofColor initialClearColor;
-    
-    int screenNum;
-    int layer;
-    
-    ofxRPI4WindowSettings();
-    ofxRPI4WindowSettings(const ofGLESWindowSettings & settings);
-};
 
 
 struct drm_fb {
@@ -226,7 +202,7 @@ public:
     GBM gbm;
     fd_set fds;
     drmEventContext evctx;
-    gbm_bo* bo;
+    gbm_bo* bufferObject;
     GLfloat aspect;
     
     GLuint program;
