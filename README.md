@@ -24,6 +24,9 @@ else
 endif
 ```
 
+comment out `ofSetupOpenGL` in 
+https://github.com/openframeworks/openFrameworks/blob/master/libs/openFrameworks/app/ofAppRunner.cpp#L31
+
 
 ### USAGE:   
 Clone into openFrameworks/addons
