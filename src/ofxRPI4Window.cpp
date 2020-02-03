@@ -31,6 +31,23 @@ static string eglErrorString(EGLint err) {
     return str;
 }
 
+
+int refresh_rate(drmModeModeInfo *mode)
+{
+    int res = (mode->clock * 1000000LL / mode->htotal + mode->vtotal / 2) / mode->vtotal;
+    
+    if (mode->flags & DRM_MODE_FLAG_INTERLACE)
+        res *= 2;
+    
+    if (mode->flags & DRM_MODE_FLAG_DBLSCAN)
+        res /= 2;
+    
+    if (mode->vscan > 1)
+        res /= mode->vscan;
+    
+    return res;
+}
+
 bool has_ext(const char *extension_list, const char *ext)
 {
     
@@ -271,8 +288,10 @@ void ofxRPI4Window::init_egl(int samples)
     egl.eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC)eglGetProcAddress("eglCreateSyncKHR");
     egl.eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC)eglGetProcAddress("eglDestroySyncKHR");
     egl.eglClientWaitSyncKHR = (PFNEGLCLIENTWAITSYNCKHRPROC)eglGetProcAddress("eglClientWaitSyncKHR");
-    
-    
+
+    ofLog() << "egl.eglClientWaitSyncKHR: " << egl.eglClientWaitSyncKHR;
+    ofLog() << "egl.eglCreateImageKHR: " << egl.eglCreateImageKHR;
+
     egl.display = egl.eglGetPlatformDisplayEXT(EGL_PLATFORM_GBM_KHR, gbm.dev, NULL);
     
     if (!eglInitialize(egl.display, &egl.eglVersionMajor, &egl.eglVersionMinor)) {
@@ -357,7 +376,8 @@ void ofxRPI4Window::init_egl(int samples)
 
 ofxRPI4Window::ofxRPI4Window() {
     orientation = OF_ORIENTATION_DEFAULT;
-    bufferObject = NULL;
+    bufferObject1 = NULL;
+    bufferObject2 = NULL;
     skipRender = false;
 }
 ofxRPI4Window::ofxRPI4Window(const ofGLESWindowSettings & settings) {
@@ -379,14 +399,20 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
     ofLog() << "DRM_DISPLAY_MODE_LEN: " << DRM_DISPLAY_MODE_LEN;
     char mode_str[DRM_DISPLAY_MODE_LEN] = "";
     
-    char *device = "/dev/dri/card1";
-    
+    //char *device = "/dev/dri/card1";
+    char *device = NULL;
+
     uint32_t format = DRM_FORMAT_XRGB8888;
     uint64_t modifier = DRM_FORMAT_MOD_LINEAR;
     
     unsigned int vrefresh = 0;
     init_drm(device, mode_str, vrefresh);
     ofLog() << "device: " << device;
+    ofLog() << "vrefresh: " << vrefresh;
+
+    //bool canAtomic = (drmSetClientCap(drm.fd, DRM_CLIENT_CAP_ATOMIC, 1) == 0);
+    //ofLog() << "canAtomic:" << canAtomic;
+
     
     if(drm.mode)
     {
@@ -431,7 +457,7 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
         
         swapBuffers();
         
-        drm_fb_get_from_bo(bufferObject);
+        drm_fb_get_from_bo(bufferObject1);
 
         glClearColor(255.0f,
                      255.0f,
@@ -582,6 +608,8 @@ void ofxRPI4Window::init_drm(const char *device, const char *mode_str, unsigned 
     }
     
     if (encoder) {
+        ofLog() << "FOUND encoder: " << encoder;
+
         drm.crtc_id = encoder->crtc_id;
     } else {
         uint32_t crtc_id = find_crtc_for_connector(drm, resources, connector);
@@ -732,75 +760,13 @@ drm_fb* ofxRPI4Window::drm_fb_get_from_bo(gbm_bo* bo)
 
 
 
-void ofxRPI4Window::makeCurrent()
-{
-    eglMakeCurrent(egl.display, egl.surface, egl.surface, egl.context);
 
-}
 
 void ofxRPI4Window::update()
 {
     //ofLog() << "update";
     coreEvents.notifyUpdate();
     
-}
-
-int ofxRPI4Window::getWidth()
-{
-    //ofLog() << __func__ << currentWindowRect.width;
-    return currentWindowRect.width;
-}
-
-int ofxRPI4Window::getHeight()
-{
-    //ofLog() << __func__ << currentWindowRect.height;
-
-    return currentWindowRect.height;
-}
-
-glm::vec2 ofxRPI4Window::getScreenSize()
-{
-    
-    ofLog() << __func__;
-    return {currentWindowRect.getWidth(), currentWindowRect.getHeight()};
-}
-
-glm::vec2 ofxRPI4Window::getWindowSize()
-{
-    //ofLog() << __func__;
-    return {currentWindowRect.width, currentWindowRect.height};
-}
-
-//------------------------------------------------------------
-glm::vec2 ofxRPI4Window::getWindowPosition(){
-    ofLog() << __func__;
-    return glm::vec2(currentWindowRect.getPosition());
-}
-
-
-void ofxRPI4Window::swapBuffers()
-{
-   // ofLog() << __func__;
-    
-    EGLBoolean success = eglSwapBuffers(egl.display, egl.surface);
-    if(!success) {
-        GLint error = eglGetError();
-        ofLog() << "eglSwapBuffers failed: " << eglErrorString(error);
-    }
-    
-}
-
-void ofxRPI4Window::startRender()
-{
-    ofLog() << __func__;
-
-    renderer()->startRender();
-}
-
-void ofxRPI4Window::finishRender()
-{
-    ofLog() << __func__;
-    renderer()->finishRender();
 }
 
 void ofxRPI4Window::draw()
@@ -812,31 +778,32 @@ void ofxRPI4Window::draw()
     {
         
         coreEvents.notifyDraw();
-
+        
         swapBuffers();
-
+        
     }else
     {
         currentRenderer->startRender();
         if( bEnableSetupScreen )
         {
-            currentRenderer->setupScreen();
+            //currentRenderer->setupScreen();
             //bEnableSetupScreen = false;
         }
-        
-        
         coreEvents.notifyDraw();
+
+
         currentRenderer->finishRender();
         swapBuffers();
+
     }
     
-
-
     
-    gbm_bo* next_bo = gbm_surface_lock_front_buffer(gbm.surface);
+    
+    
+    bufferObject2 = gbm_surface_lock_front_buffer(gbm.surface);
     
     //ofLog () << "next_bo: " << next_bo;
-    drm_fb* fb = drm_fb_get_from_bo(next_bo);
+    drm_fb* fb = drm_fb_get_from_bo(bufferObject2);
     if (!fb) {
         fprintf(stderr, "Failed to get a new framebuffer BO\n");
     }
@@ -847,7 +814,7 @@ void ofxRPI4Window::draw()
      */
     
     int ret = drmModePageFlip(drm.fd, drm.crtc_id, fb->fb_id,
-                          DRM_MODE_PAGE_FLIP_EVENT, &waiting_for_flip);
+                              DRM_MODE_PAGE_FLIP_EVENT, &waiting_for_flip);
     if (ret) {
         printf("failed to queue page flip: %s\n", strerror(errno));
     }
@@ -871,9 +838,78 @@ void ofxRPI4Window::draw()
     }
     
     /* release last buffer to render on again: */
-    gbm_surface_release_buffer(gbm.surface, bufferObject);
-    bufferObject = next_bo;
+    gbm_surface_release_buffer(gbm.surface, bufferObject1);
+    bufferObject1 = bufferObject2;
+    
+}
 
+void ofxRPI4Window::drawAtomic()
+{
+
+}
+
+
+int ofxRPI4Window::getWidth()
+{
+    //ofLog() << __func__ << currentWindowRect.width;
+    return currentWindowRect.width;
+}
+
+int ofxRPI4Window::getHeight()
+{
+    //ofLog() << __func__ << currentWindowRect.height;
+
+    return currentWindowRect.height;
+}
+
+glm::vec2 ofxRPI4Window::getScreenSize()
+{
+    
+    //ofLog() << __func__;
+    return {currentWindowRect.getWidth(), currentWindowRect.getHeight()};
+}
+
+glm::vec2 ofxRPI4Window::getWindowSize()
+{
+    //ofLog() << __func__;
+    return {currentWindowRect.width, currentWindowRect.height};
+}
+
+//------------------------------------------------------------
+glm::vec2 ofxRPI4Window::getWindowPosition(){
+    //ofLog() << __func__;
+    return glm::vec2(currentWindowRect.getPosition());
+}
+
+void ofxRPI4Window::makeCurrent()
+{
+    eglMakeCurrent(egl.display, egl.surface, egl.surface, egl.context);
+    
+}
+
+void ofxRPI4Window::swapBuffers()
+{
+   // ofLog() << __func__;
+    
+    EGLBoolean success = eglSwapBuffers(egl.display, egl.surface);
+    if(!success) {
+        GLint error = eglGetError();
+        ofLog() << "eglSwapBuffers failed: " << eglErrorString(error);
+    }
+    
+}
+
+void ofxRPI4Window::startRender()
+{
+    //ofLog() << __func__;
+
+    renderer()->startRender();
+}
+
+void ofxRPI4Window::finishRender()
+{
+    //ofLog() << __func__;
+    renderer()->finishRender();
 }
 
 void ofxRPI4Window::setWindowShape(int w, int h)
@@ -891,34 +927,37 @@ ofCoreEvents & ofxRPI4Window::events(){
     return coreEvents;
 }
 
+void ofxRPI4Window::setVerticalSync(bool enabled)
+{
+    eglSwapInterval(egl.display, enabled ? 1 : 0);
+}
 
-void ofxRPI4Window::enableSetupScreen(){
+void ofxRPI4Window::enableSetupScreen()
+{
     bEnableSetupScreen = true;
 }
 
-//------------------------------------------------------------
-void ofxRPI4Window::disableSetupScreen(){
+void ofxRPI4Window::disableSetupScreen()
+{
     bEnableSetupScreen = false;
 }
 
-
-
 EGLDisplay ofxRPI4Window::getEGLDisplay()
 {
-    ofLog() << __func__;
+    //ofLog() << __func__;
     return egl.display;
 }
 
 EGLContext ofxRPI4Window::getEGLContext()
 {
-    ofLog() << __func__;
+    //ofLog() << __func__;
 
     return egl.context;
 }
 
 EGLSurface ofxRPI4Window::getEGLSurface()
 {
-    ofLog() << __func__;
+    //ofLog() << __func__;
 
     return egl.surface;
 }

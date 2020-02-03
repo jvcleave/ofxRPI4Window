@@ -136,7 +136,7 @@ public:
     PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
     PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR;
     PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
-    
+
     bool modifiers_supported;
         
     EGL()
@@ -170,8 +170,9 @@ public:
     GBM gbm;
     fd_set fds;
     drmEventContext evctx;
-    gbm_bo* bufferObject;
-    
+    gbm_bo* bufferObject1;
+    gbm_bo* bufferObject2;
+
     
     ofRectangle currentWindowRect;
     ofOrientation orientation;
@@ -203,7 +204,7 @@ public:
     void enableSetupScreen() override;
     void disableSetupScreen() override;
     void setWindowShape(int w, int h) override;
-    
+    void setVerticalSync(bool enabled) override;
     
     void update() override;
     void draw() override;
@@ -227,5 +228,5 @@ public:
   
     virtual ~ofxRPI4Window();
     bool skipRender;
-
+    void drawAtomic();
 };

@@ -48,7 +48,7 @@
 #include <EGL/eglext.h>
 
 #include <gbm.h>
-#include <drm_fourcc.h>
+#include "drm_fourcc.h"
 #include <stdbool.h>
 #ifdef __cplusplus
 

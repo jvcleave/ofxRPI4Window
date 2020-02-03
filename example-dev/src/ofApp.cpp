@@ -16,9 +16,17 @@ bool hasPrinted = false;
 void ofApp::draw(){
     
     ofxRPI4Window* winptr = static_cast<ofxRPI4Window*>(ofGetWindowPtr());
+    //winptr->setVerticalSync(false);
+    //ofSetFrameRate(60);
+
     if(winptr->skipRender)
     {
+       
+        ofLog() << ofGetFrameRate();
+
+        return;
         testCube.draw(winptr->gbm);
+
         //ofLog() << "ofGetFrameNum: " << ofGetFrameNum();
         //ofLog() << "ofGetLastFrameTime: " << ofGetLastFrameTime();
     }else
@@ -26,29 +34,26 @@ void ofApp::draw(){
         auto randomColor = ofColor(ofRandom(255), ofRandom(255), ofRandom(255));
         //ofSetColor(randomColor);
         //ofBackground(randomColor);
-        ofBackgroundGradient(randomColor, ofColor::black, OF_GRADIENT_CIRCULAR);
+        //ofBackgroundGradient(randomColor, ofColor::black, OF_GRADIENT_CIRCULAR);
         
-        drawGraphicsExample();
+        //drawGraphicsExample();
     }
     
    
-    if (!hasPrinted)
-    {
-        stringstream info;
-        
-        info << "ofGetWidth(): " << ofGetWidth() << endl;
-        info << " ofGetHeight(): " << ofGetHeight()<< endl;
-        info << " ofGetScreenHeight(): " << ofGetScreenHeight()<< endl;
-        info << " ofGetScreenWidth(): " << ofGetScreenWidth()<< endl;
-        info << " ofGetWindowWidth(): " << ofGetWindowWidth()<< endl;
-        info << " ofGetWindowHeight(): " << ofGetWindowHeight()<< endl;
-        info << " ofGetWindowPositionX(): " << ofGetWindowPositionX()<< endl;
-        info << " ofGetWindowPositionY(): " << ofGetWindowPositionY()<< endl;
-        info << " ofGetWindowRect(): " << ofGetWindowRect()<< endl;
+    stringstream info;
+    info << "ofGetFrameRate(): " << ofGetFrameRate() << endl;
 
-        ofLog() << "info: " << info.str();
-        hasPrinted = true;
-    }
+    info << "ofGetWidth(): " << ofGetWidth() << endl;
+    info << "ofGetHeight(): " << ofGetHeight()<< endl;
+    info << "ofGetScreenHeight(): " << ofGetScreenHeight()<< endl;
+    info << "ofGetScreenWidth(): " << ofGetScreenWidth()<< endl;
+    info << "ofGetWindowWidth(): " << ofGetWindowWidth()<< endl;
+    info << "ofGetWindowHeight(): " << ofGetWindowHeight()<< endl;
+    info << "ofGetWindowPositionX(): " << ofGetWindowPositionX()<< endl;
+    info << "ofGetWindowPositionY(): " << ofGetWindowPositionY()<< endl;
+    info << "ofGetWindowRect(): " << ofGetWindowRect()<< endl;
+    
+    ofDrawBitmapStringHighlight(info.str(), 20, 20, ofColor::black, ofColor::yellow );
 
 }
 
