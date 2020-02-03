@@ -227,7 +227,7 @@ static void
 drm_fb_destroy_callback(struct gbm_bo *bo, void *data)
 {
     
-    ofLog() << __func__;
+    //ofLog() << __func__;
     
     int drm_fd = gbm_device_get_fd(gbm_bo_get_device(bo));
     struct drm_fb *fb = (drm_fb*)data;
@@ -761,7 +761,7 @@ int ofxRPI4Window::getHeight()
 glm::vec2 ofxRPI4Window::getScreenSize()
 {
     
-    ofLog() << __func__;
+    //ofLog() << __func__;
     return {currentWindowRect.getWidth(), currentWindowRect.getHeight()};
 }
 
@@ -773,7 +773,7 @@ glm::vec2 ofxRPI4Window::getWindowSize()
 
 //------------------------------------------------------------
 glm::vec2 ofxRPI4Window::getWindowPosition(){
-    ofLog() << __func__;
+    //ofLog() << __func__;
     return glm::vec2(currentWindowRect.getPosition());
 }
 
@@ -792,14 +792,14 @@ void ofxRPI4Window::swapBuffers()
 
 void ofxRPI4Window::startRender()
 {
-    ofLog() << __func__;
+    //ofLog() << __func__;
 
     renderer()->startRender();
 }
 
 void ofxRPI4Window::finishRender()
 {
-    ofLog() << __func__;
+    //ofLog() << __func__;
     renderer()->finishRender();
 }
 
@@ -833,10 +833,9 @@ void ofxRPI4Window::draw()
 
 
     
-    gbm_bo* next_bo = gbm_surface_lock_front_buffer(gbm.surface);
+    bufferObjectNext = gbm_surface_lock_front_buffer(gbm.surface);
     
-    //ofLog () << "next_bo: " << next_bo;
-    drm_fb* fb = drm_fb_get_from_bo(next_bo);
+    drm_fb* fb = drm_fb_get_from_bo(bufferObjectNext);
     if (!fb) {
         fprintf(stderr, "Failed to get a new framebuffer BO\n");
     }
@@ -872,7 +871,7 @@ void ofxRPI4Window::draw()
     
     /* release last buffer to render on again: */
     gbm_surface_release_buffer(gbm.surface, bufferObject);
-    bufferObject = next_bo;
+    bufferObject = bufferObjectNext;
 
 }
 
@@ -901,24 +900,27 @@ void ofxRPI4Window::disableSetupScreen(){
     bEnableSetupScreen = false;
 }
 
-
+void ofxRPI4Window::setVerticalSync(bool enabled)
+{
+    eglSwapInterval(egl.display, enabled ? 1 : 0);
+}
 
 EGLDisplay ofxRPI4Window::getEGLDisplay()
 {
-    ofLog() << __func__;
+    //ofLog() << __func__;
     return egl.display;
 }
 
 EGLContext ofxRPI4Window::getEGLContext()
 {
-    ofLog() << __func__;
+    //ofLog() << __func__;
 
     return egl.context;
 }
 
 EGLSurface ofxRPI4Window::getEGLSurface()
 {
-    ofLog() << __func__;
+    //ofLog() << __func__;
 
     return egl.surface;
 }

@@ -29,13 +29,10 @@ void ofApp::draw(){
         ofBackgroundGradient(randomColor, ofColor::black, OF_GRADIENT_CIRCULAR);
         
         drawGraphicsExample();
-    }
-    
-   
-    if (!hasPrinted)
-    {
+        
         stringstream info;
         
+        info << "ofGetFrameRate(): " << ofGetFrameRate() << endl;
         info << "ofGetWidth(): " << ofGetWidth() << endl;
         info << " ofGetHeight(): " << ofGetHeight()<< endl;
         info << " ofGetScreenHeight(): " << ofGetScreenHeight()<< endl;
@@ -45,10 +42,19 @@ void ofApp::draw(){
         info << " ofGetWindowPositionX(): " << ofGetWindowPositionX()<< endl;
         info << " ofGetWindowPositionY(): " << ofGetWindowPositionY()<< endl;
         info << " ofGetWindowRect(): " << ofGetWindowRect()<< endl;
-
-        ofLog() << "info: " << info.str();
-        hasPrinted = true;
+        
+        
+        if (!hasPrinted)
+        {
+            
+            ofLog() << "info: " << info.str();
+            hasPrinted = true;
+        }
+        ofDrawBitmapStringHighlight(info.str(), 20, 20);
     }
+    
+   
+    
 
 }
 

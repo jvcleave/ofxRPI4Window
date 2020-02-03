@@ -161,6 +161,7 @@ struct drm_fb {
     uint32_t fb_id;
 };
 
+//Linux RPI4 4.19.75-v7l+ #1270 SMP Tue Sep 24 18:51:41 BST 2019 armv7l GNU/Linux 
 class ofxRPI4Window : public ofAppBaseGLESWindow
 {
 public:
@@ -171,7 +172,8 @@ public:
     fd_set fds;
     drmEventContext evctx;
     gbm_bo* bufferObject;
-    
+    gbm_bo* bufferObjectNext;
+
     
     ofRectangle currentWindowRect;
     ofOrientation orientation;
@@ -203,7 +205,7 @@ public:
     void enableSetupScreen() override;
     void disableSetupScreen() override;
     void setWindowShape(int w, int h) override;
-    
+    void setVerticalSync(bool enabled) override;
     
     void update() override;
     void draw() override;
