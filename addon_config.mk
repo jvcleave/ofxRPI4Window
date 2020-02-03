@@ -23,5 +23,6 @@ meta:
 common:
 
 	ADDON_INCLUDES = src
-    ADDON_CFLAGS = -Wno-unused-variable -Wno-unused-value -Wno-unused-function -Wno-class-memaccess
-	ADDON_LDFLAGS= -ldrm -lgbm
+    ADDON_CFLAGS = -I/usr/include/libdrm -Wno-unused-variable -Wno-unused-value -Wno-unused-function -Wno-class-memaccess
+	ADDON_LDFLAGS = -ldrm
+    ADDON_LDFLAGS += -lgbm
