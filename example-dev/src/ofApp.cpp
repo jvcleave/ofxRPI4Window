@@ -3,7 +3,7 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     ofxRPI4Window* winptr = static_cast<ofxRPI4Window*>(ofGetWindowPtr());
-    winptr->skipRender = false;
+    winptr->skipRender = true;
 }
 
 //--------------------------------------------------------------
@@ -26,9 +26,9 @@ void ofApp::draw(){
         auto randomColor = ofColor(ofRandom(255), ofRandom(255), ofRandom(255));
         //ofSetColor(randomColor);
         //ofBackground(randomColor);
-        ofBackgroundGradient(randomColor, ofColor::black, OF_GRADIENT_CIRCULAR);
+        //ofBackgroundGradient(randomColor, ofColor::black, OF_GRADIENT_CIRCULAR);
         
-        drawGraphicsExample();
+        //drawGraphicsExample();
         
         stringstream info;
         
@@ -50,7 +50,7 @@ void ofApp::draw(){
             ofLog() << "info: " << info.str();
             hasPrinted = true;
         }
-        ofDrawBitmapStringHighlight(info.str(), 20, 20);
+        //ofDrawBitmapStringHighlight(info.str(), 20, 20);
     }
     
    

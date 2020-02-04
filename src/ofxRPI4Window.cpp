@@ -803,10 +803,23 @@ void ofxRPI4Window::finishRender()
     renderer()->finishRender();
 }
 
+int ofxRPI4WindowFrameCounter = 0;
+
+int drawStartTime = 0;
+int lastSecond = 0;
+
 void ofxRPI4Window::draw()
 {
     
+    clock_t before = clock();
+
+  
+    if(!drawStartTime)
+    {
+        drawStartTime = ofGetElapsedTimeMillis();
+    }
     int waiting_for_flip = 1;
+    auto startFrame = ofGetElapsedTimeMillis();
     
     if(skipRender)
     {
@@ -830,9 +843,35 @@ void ofxRPI4Window::draw()
         swapBuffers();
     }
     
-
+    ofxRPI4WindowFrameCounter++;
+    //ofLog() << ofxRPI4WindowFrameCounter;
+    auto endFrame = ofGetElapsedTimeMillis();
+    clock_t difference = clock() - before;
 
     
+    auto frameMillis = endFrame-startFrame;
+    float msec = (float)difference*1000/CLOCKS_PER_SEC;
+    
+    
+    
+    auto totalMillis = endFrame-drawStartTime;
+    int totalSeconds = totalMillis/1000;
+    
+    if(lastSecond != totalSeconds)
+    {
+        lastSecond = totalSeconds;
+        
+        ofLog() << "msec: " << msec;
+        ofLog() << "frameMillis: " << frameMillis;
+        ofLog() << lastSecond << " fps: " << ofxRPI4WindowFrameCounter;
+
+        ofxRPI4WindowFrameCounter = 0;
+        
+    }
+    
+
+
+
     bufferObjectNext = gbm_surface_lock_front_buffer(gbm.surface);
     
     drm_fb* fb = drm_fb_get_from_bo(bufferObjectNext);
