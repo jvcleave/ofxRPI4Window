@@ -3,7 +3,7 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     ofxRPI4Window* winptr = static_cast<ofxRPI4Window*>(ofGetWindowPtr());
-    winptr->skipRender = true;
+    winptr->skipRender = false;
 }
 
 //--------------------------------------------------------------
@@ -18,7 +18,7 @@ void ofApp::draw(){
     ofxRPI4Window* winptr = static_cast<ofxRPI4Window*>(ofGetWindowPtr());
     if(winptr->skipRender)
     {
-        testCube.draw(winptr->gbm);
+        testCube.draw();
         //ofLog() << "ofGetFrameNum: " << ofGetFrameNum();
         //ofLog() << "ofGetLastFrameTime: " << ofGetLastFrameTime();
     }else
@@ -28,29 +28,17 @@ void ofApp::draw(){
         //ofBackground(randomColor);
         //ofBackgroundGradient(randomColor, ofColor::black, OF_GRADIENT_CIRCULAR);
         
-        //drawGraphicsExample();
-        
-        stringstream info;
-        
-        info << "ofGetFrameRate(): " << ofGetFrameRate() << endl;
-        info << "ofGetWidth(): " << ofGetWidth() << endl;
-        info << " ofGetHeight(): " << ofGetHeight()<< endl;
-        info << " ofGetScreenHeight(): " << ofGetScreenHeight()<< endl;
-        info << " ofGetScreenWidth(): " << ofGetScreenWidth()<< endl;
-        info << " ofGetWindowWidth(): " << ofGetWindowWidth()<< endl;
-        info << " ofGetWindowHeight(): " << ofGetWindowHeight()<< endl;
-        info << " ofGetWindowPositionX(): " << ofGetWindowPositionX()<< endl;
-        info << " ofGetWindowPositionY(): " << ofGetWindowPositionY()<< endl;
-        info << " ofGetWindowRect(): " << ofGetWindowRect()<< endl;
-        
+        drawGraphicsExample();
+
+        string info = winptr->getInfo();
         
         if (!hasPrinted)
         {
             
-            ofLog() << "info: " << info.str();
+            ofLog() << "info: " << info;
             hasPrinted = true;
         }
-        //ofDrawBitmapStringHighlight(info.str(), 20, 20);
+        ofDrawBitmapStringHighlight(info, 20, 20);
     }
     
    

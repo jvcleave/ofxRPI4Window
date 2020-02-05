@@ -139,12 +139,11 @@ void main()
     gl_FragColor = vVaryingColor;
 });
 
-
-void TestCube::draw(GBM& gbm)
+void TestCube::draw()
 {
     int i = ofGetFrameNum();
     
-    auto aspect = (GLfloat)(gbm.height) / (GLfloat)(gbm.width);
+    auto aspect = ofGetWidth() / ofGetHeight();
     if(program == 0)
     {
         GLint ret;
@@ -188,7 +187,7 @@ void TestCube::draw(GBM& gbm)
         modelviewprojectionmatrix = glGetUniformLocation(program, "modelviewprojectionMatrix");
         normalmatrix = glGetUniformLocation(program, "normalMatrix");
         
-        glViewport(0, 0, gbm.width, gbm.height);
+        glViewport(0, 0, ofGetWidth(), ofGetHeight());
         glEnable(GL_CULL_FACE);
         positionsoffset = 0;
         colorsoffset = sizeof(vVertices);
@@ -253,4 +252,3 @@ void TestCube::draw(GBM& gbm)
     glDrawArrays(GL_TRIANGLE_STRIP, 16, 4);
     glDrawArrays(GL_TRIANGLE_STRIP, 20, 4);
 }
-
