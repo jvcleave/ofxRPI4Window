@@ -33,6 +33,8 @@ ofxRPI4Window::ofxRPI4Window() {
     skipRender = false;
     previousBo = NULL;
     lastFrameTimeMillis = 0;
+    gbmDevice = NULL;
+    gbmSurface = NULL;
 }
 ofxRPI4Window::ofxRPI4Window(const ofGLESWindowSettings & settings) {
     ofLog() << "CTOR CALLED WITH settings";
@@ -480,9 +482,31 @@ string ofxRPI4Window::getInfo()
     
     return info.str();
 }
+
+void ofxRPI4Window::gbmClean()
+{
+    // set the previous crtc
+    drmModeSetCrtc(device, crtc->crtc_id, crtc->buffer_id, crtc->x, crtc->y, &connectorId, 1, &crtc->mode);
+    drmModeFreeCrtc(crtc);
+    
+    if (previousBo)
+    {
+        drmModeRmFB(device, previousFb);
+        gbm_surface_release_buffer(gbmSurface, previousBo);
+    }
+    
+    gbm_surface_destroy(gbmSurface);
+    gbm_device_destroy(gbmDevice);
+}
+
+
 ofxRPI4Window::~ofxRPI4Window()
 {
-    
+    eglDestroyContext(display, context);
+    eglDestroySurface(display, surface);
+    eglTerminate(display);
+    gbmClean();
+    ::close(device);
 }
 
 
