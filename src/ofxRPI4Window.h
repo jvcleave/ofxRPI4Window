@@ -109,4 +109,5 @@ public:
     struct timeval t1;
     float lastFrameTimeMillis;
     string getInfo();
+    void gbmClean();
 };
