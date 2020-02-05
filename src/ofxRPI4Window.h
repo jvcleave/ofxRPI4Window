@@ -10,6 +10,7 @@
 #include <fcntl.h>  // open fcntl
 #include <unistd.h> // read close
 #include <string.h> // strlen
+#include <sys/time.h>
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -34,146 +35,24 @@ typedef EGLDisplay (EGLAPIENTRYP PFNEGLGETPLATFORMDISPLAYEXTPROC) (EGLenum platf
 using namespace std;
 
 
-class CRTC
-{
-public:
-    
-    drmModeCrtc *crtc;
-    drmModeObjectProperties *props;
-    drmModePropertyRes **props_info;
-    
-    CRTC()
-    {
-        crtc = NULL;
-        props = NULL;
-        props_info = NULL;
-        
-    }
-    
-};
-
-class Connector {
-public:
-    
-    drmModeConnector *connector;
-    drmModeObjectProperties *props;
-    drmModePropertyRes **props_info;
-    
-    Connector()
-    {
-        connector = NULL;
-        props = NULL;
-        props_info = NULL;
-    }
-    
-};
-
-class DRM
-{
-public:
-    
-    int fd;
-    
-    
-    CRTC crtc;
-    Connector connector;
-    int crtc_index;
-    int kms_in_fence_fd;
-    int kms_out_fence_fd;
-    
-    drmModeModeInfo *mode;
-    uint32_t crtc_id;
-    uint32_t connector_id;
-        
-    DRM()
-    {
-        fd = 0;
-        mode = NULL;
-    }
-    
-};
-
-class GBM
-{
-public:
-    
-    struct gbm_device *dev;
-    struct gbm_surface *surface;
-    uint32_t format;
-    int width, height;
-    
-    GBM()
-    {
-        
-        format = 0;
-        width = 0;
-        height = 0;
-        
-    }
-    
-};
-
-
-
-
-
-
-class EGL {
-    
-public:
-    
-    EGLDisplay display;
-    EGLConfig config;
-    EGLContext context;
-    EGLSurface surface;
-    EGLint eglVersionMajor;
-    EGLint eglVersionMinor;
-    
-    PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT;
-    PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
-    PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR;
-    PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
-    PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
-    PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR;
-    PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
-    
-    bool modifiers_supported;
-        
-    EGL()
-    {
-        
-        display = NULL;
-        config = NULL;
-        context = NULL;
-        surface = NULL;
-        eglVersionMajor = 0;
-        eglVersionMinor = 0;
-
-    }
-};
-
-typedef std::map<EGLint,EGLint> ofEGLAttributeList;
-
-
-
-struct drm_fb {
-    struct gbm_bo *bo;
-    uint32_t fb_id;
-};
-
 //Linux RPI4 4.19.75-v7l+ #1270 SMP Tue Sep 24 18:51:41 BST 2019 armv7l GNU/Linux 
 class ofxRPI4Window : public ofAppBaseGLESWindow
 {
 public:
     
-    EGL egl;
-    DRM drm;
-    GBM gbm;
-    fd_set fds;
-    drmEventContext evctx;
-    gbm_bo* bufferObject;
-    gbm_bo* bufferObjectNext;
 
+    EGLDisplay display;
+    EGLContext context;
+    EGLSurface surface;
+    
+    int device;
+    drmModeModeInfo mode;
+    struct gbm_device* gbmDevice;
+    struct gbm_surface* gbmSurface;
+    drmModeCrtc *crtc;
+    uint32_t connectorId;
+    gbm_bo *previousBo;
+    uint32_t previousFb;
     
     ofRectangle currentWindowRect;
     ofOrientation orientation;
@@ -181,16 +60,13 @@ public:
     int glesVersion;
     ofWindowMode windowMode;
 
-    void init_gbm(int drm_fd, int w, int h, uint32_t format, uint64_t modifier);
-    void init_drm(const char *device, const char *mode_str, unsigned int vrefresh);
-    void init_egl(int samples);
+
     static bool allowsMultiWindow(){ return false; }
     static bool doesLoop(){ return false; }
     static void loop(){};
     static bool needsPolling(){ return true; }
     static void pollEvents();
     
-    drm_fb* drm_fb_get_from_bo(gbm_bo* bo);
 
     ofxRPI4Window();
     ofxRPI4Window(const ofGLESWindowSettings & settings);
@@ -229,5 +105,8 @@ public:
   
     virtual ~ofxRPI4Window();
     bool skipRender;
-
+    struct timeval t0;
+    struct timeval t1;
+    float lastFrameTimeMillis;
+    string getInfo();
 };

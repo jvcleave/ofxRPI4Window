@@ -1,4 +1,5 @@
 #include "ofApp.h"
+int currentRes = 1;
 
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -49,6 +50,7 @@ void ofApp::setup(){
 	material.setSpecularColor(ofColor(255, 255, 255, 255));
 
 	ofSetSphereResolution(24);
+    keyPressed(currentRes);
 
 }
 
@@ -68,9 +70,22 @@ void ofApp::update() {
 	
 }
 
+
 //--------------------------------------------------------------
 void ofApp::draw() {
-
+    
+    if(ofGetFrameNum() % 90 == 0)
+    {
+        if(currentRes + 1 < 4)
+        {
+            currentRes++;
+        }else
+        {
+            currentRes = 1;
+        }
+        keyPressed(currentRes);
+        ofLog() << "currentRes: " << currentRes;
+    }
 	float spinX = sin(ofGetElapsedTimef()*.35f);
 	float spinY = cos(ofGetElapsedTimef()*.075f);
 
@@ -418,7 +433,9 @@ void ofApp::draw() {
 
 	if(bHelpText) {
 		stringstream ss;
-		ss << "FPS: " << ofToString(ofGetFrameRate(),0) << endl << endl;
+		ss << "FPS: " << ofGetFrameRate() << endl << endl;
+        ss << "ofGetLastFrameTime: " << ofGetLastFrameTime() << endl << endl;
+
 		ss << "(f): Toggle Fullscreen"<<endl<<"(s): Draw Solid Shapes"<<endl<<"(w): Draw Wireframes"<<endl;
 		ss <<"(1/2/3/4): Set Resolutions" <<endl<<"(n): Draw Normals"<<"\n(LEFT/RIGHT): Set Mode "<<ofToString(mode,0)<<endl;
 		ss <<"(z): Split Faces " <<bSplitFaces<<endl;

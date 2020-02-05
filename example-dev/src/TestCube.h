@@ -14,6 +14,6 @@ public:
         
     }
     
-    void draw(GBM& gbm);
+    void draw();
 
 };
