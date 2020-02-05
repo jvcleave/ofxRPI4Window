@@ -471,14 +471,14 @@ string ofxRPI4Window::getInfo()
     info << "lastFrameTimeMillis: " << lastFrameTimeMillis << endl;
 
     info << "ofGetWidth(): " << ofGetWidth() << endl;
-    info << " ofGetHeight(): " << ofGetHeight()<< endl;
-    info << " ofGetScreenHeight(): " << ofGetScreenHeight()<< endl;
-    info << " ofGetScreenWidth(): " << ofGetScreenWidth()<< endl;
-    info << " ofGetWindowWidth(): " << ofGetWindowWidth()<< endl;
-    info << " ofGetWindowHeight(): " << ofGetWindowHeight()<< endl;
-    info << " ofGetWindowPositionX(): " << ofGetWindowPositionX()<< endl;
-    info << " ofGetWindowPositionY(): " << ofGetWindowPositionY()<< endl;
-    info << " ofGetWindowRect(): " << ofGetWindowRect()<< endl;
+    info << "ofGetHeight(): " << ofGetHeight()<< endl;
+    info << "ofGetScreenHeight(): " << ofGetScreenHeight()<< endl;
+    info << "ofGetScreenWidth(): " << ofGetScreenWidth()<< endl;
+    info << "ofGetWindowWidth(): " << ofGetWindowWidth()<< endl;
+    info << "ofGetWindowHeight(): " << ofGetWindowHeight()<< endl;
+    info << "ofGetWindowPositionX(): " << ofGetWindowPositionX()<< endl;
+    info << "ofGetWindowPositionY(): " << ofGetWindowPositionY()<< endl;
+    info << "ofGetWindowRect(): " << ofGetWindowRect()<< endl;
     
     return info.str();
 }
