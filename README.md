@@ -33,4 +33,6 @@ Clone into openFrameworks/addons
 
 ### CREDITS:   
 derived from 
+https://github.com/matusnovak/rpi-opengl-without-x
+
 https://gitlab.freedesktop.org/mesa/kmscube/tree/master
