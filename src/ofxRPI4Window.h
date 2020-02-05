@@ -10,6 +10,7 @@
 #include <fcntl.h>  // open fcntl
 #include <unistd.h> // read close
 #include <string.h> // strlen
+#include <sys/time.h>
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -229,5 +230,7 @@ public:
   
     virtual ~ofxRPI4Window();
     bool skipRender;
-
+    struct timeval t0;
+    struct timeval t1;
+    float elapsed;
 };

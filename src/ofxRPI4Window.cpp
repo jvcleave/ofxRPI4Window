@@ -803,24 +803,22 @@ void ofxRPI4Window::finishRender()
     renderer()->finishRender();
 }
 
-int ofxRPI4WindowFrameCounter = 0;
 
-int drawStartTime = 0;
-int lastSecond = 0;
+float timedifference_msec(struct timeval t0, struct timeval t1)
+{
+    return (t1.tv_sec - t0.tv_sec) * 1000.0f + (t1.tv_usec - t0.tv_usec) / 1000.0f;
+}
 
 void ofxRPI4Window::draw()
 {
     
-    clock_t before = clock();
 
-  
-    if(!drawStartTime)
-    {
-        drawStartTime = ofGetElapsedTimeMillis();
-    }
+
     int waiting_for_flip = 1;
     auto startFrame = ofGetElapsedTimeMillis();
-    
+    gettimeofday(&t0, 0);
+
+
     if(skipRender)
     {
         
@@ -843,32 +841,11 @@ void ofxRPI4Window::draw()
         swapBuffers();
     }
     
-    ofxRPI4WindowFrameCounter++;
-    //ofLog() << ofxRPI4WindowFrameCounter;
-    auto endFrame = ofGetElapsedTimeMillis();
-    clock_t difference = clock() - before;
-
+    gettimeofday(&t1, 0);
     
-    auto frameMillis = endFrame-startFrame;
-    float msec = (float)difference*1000/CLOCKS_PER_SEC;
+    elapsed = timedifference_msec(t0, t1);
     
-    
-    
-    auto totalMillis = endFrame-drawStartTime;
-    int totalSeconds = totalMillis/1000;
-    
-    if(lastSecond != totalSeconds)
-    {
-        lastSecond = totalSeconds;
-        
-        ofLog() << "msec: " << msec;
-        ofLog() << "frameMillis: " << frameMillis;
-        ofLog() << lastSecond << " fps: " << ofxRPI4WindowFrameCounter;
-
-        ofxRPI4WindowFrameCounter = 0;
-        
-    }
-    
+    printf("Code executed in %f milliseconds.\n", elapsed);
 
 
 
