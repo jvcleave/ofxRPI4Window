@@ -72,7 +72,15 @@ void ofxRPI4Window::setup(const ofGLESWindowSettings & settings)
     bEnableSetupScreen = true;
     windowMode = OF_WINDOW;
     glesVersion = settings.glesVersion;
-    device = open("/dev/dri/card1", O_RDWR | O_CLOEXEC);
+    device = open("/dev/dri/card1", O_RDWR | O_CLOEXEC); // Try rpi4 == VideoCore VI
+    if(-1 == device){
+        ofLogVerbose("ofxRPI4Window") << "Falling back on VideoCore IV (normal on RPI 1-3).";
+        device = open("/dev/dri/card0", O_RDWR | O_CLOEXEC); // Try rpi1-3 == VideoCore IV
+    }
+    else {
+        ofLogVerbose("ofxRPI4Window") << "Using VideoCore VI (normal on RPI4).";
+    }
+
     drmModeRes* resources = drmModeGetResources(device);
     bool passed = false;
     if (resources == NULL)
