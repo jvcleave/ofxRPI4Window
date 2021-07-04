@@ -13,28 +13,26 @@ This is an openFrameworks addon for the Raspberry Pi to allow rendering without 
 - KMS Driver enabled
 - Modify your openframeworks installation : (manually or automagically)
 
-	1. Manually  
-		- Change `openFrameworks/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk`  
-		```
-ifeq ($(USE_PI_LEGACY), 1)
-	PLATFORM_DEFINES += TARGET_RASPBERRY_PI_LEGACY
-    $(info using legacy build)
-else
-	# comment this for older EGL windowing. Has no effect if USE_PI_LEGACY is enabled
-	# GLFW seems to provide a more robust window on newer Raspbian releases
+  1. Manually  
+    - Change `openFrameworks/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk`  
+    ```
+    ifeq ($(USE_PI_LEGACY), 1)
+    	PLATFORM_DEFINES += TARGET_RASPBERRY_PI_LEGACY
+        $(info using legacy build)
+    else
+    	# comment this for older EGL windowing. Has no effect if USE_PI_LEGACY is enabled
+    	# GLFW seems to provide a more robust window on newer Raspbian releases
 	#USE_GLFW_WINDOW = 1
-endif
-		```
+    endif
+    ```
 		- Comment out `ofSetupOpenGL` in 
 https://github.com/openframeworks/openFrameworks/blob/master/libs/openFrameworks/app/ofAppRunner.cpp#L31
-	2. Automatically  
-	```
-./patchOF.sh
-	```
-
+  2. Automatically
+    - Run `./patchOF.sh`
 
 ### USAGE:   
-Clone into openFrameworks/addons
+Clone into openFrameworks/addons  
+If needed, `sudo apt-get install libgbm-dev`.
 
 ### RUNNING
 Use the classic oF way to Launch your application. (eg: `make RunDebug`)  
