@@ -13,7 +13,7 @@ This is an openFrameworks addon for the Raspberry Pi to allow rendering without 
 - KMS Driver enabled
 - Modify your openframeworks installation:   
 
- #### Manually  
+ #### Manual Option  
 Change `openFrameworks/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk`   
 
 ```
@@ -30,7 +30,7 @@ Change `openFrameworks/libs/openFrameworksCompiled/project/linuxarmv6l/config.li
 Comment out `ofSetupOpenGL` in 
 https://github.com/openframeworks/openFrameworks/blob/master/libs/openFrameworks/app/ofAppRunner.cpp#L31
 
-#### Automatically   
+#### Automatic Option  
 Run `./patchOF.sh`
 
 ### USAGE:   
