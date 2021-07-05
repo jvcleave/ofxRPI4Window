@@ -11,11 +11,12 @@ This is an openFrameworks addon for the Raspberry Pi to allow rendering without 
 - Raspberry Pi 4 or 3B+ (previous ones might work too)
 - Raspbian Buster (or Stretch on Rpi <= 3)
 - KMS Driver enabled
-- Modify your openframeworks installation : (manually or automagically)
+- Modify your openframeworks installation:   
 
-  1. Manually  
-    - Change `openFrameworks/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk`  
-    ```
+ #### Manually  
+Change `openFrameworks/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk`   
+
+```
     ifeq ($(USE_PI_LEGACY), 1)
     	PLATFORM_DEFINES += TARGET_RASPBERRY_PI_LEGACY
         $(info using legacy build)
@@ -24,11 +25,13 @@ This is an openFrameworks addon for the Raspberry Pi to allow rendering without 
     	# GLFW seems to provide a more robust window on newer Raspbian releases
 	#USE_GLFW_WINDOW = 1
     endif
-    ```
-		- Comment out `ofSetupOpenGL` in 
+```
+    
+Comment out `ofSetupOpenGL` in 
 https://github.com/openframeworks/openFrameworks/blob/master/libs/openFrameworks/app/ofAppRunner.cpp#L31
-  2. Automatically
-    - Run `./patchOF.sh`
+
+#### Automatically   
+Run `./patchOF.sh`
 
 ### USAGE:   
 Clone into openFrameworks/addons  
